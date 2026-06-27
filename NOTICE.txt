@@ -1,0 +1,13 @@
+Copyright (c) 2026 Daniel Armbrust
+
+Unless otherwise noted, all documentation, articles, diagrams and other written content in this repository are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+
+If you reuse or adapt any content from this repository, attribution must be given to:
+
+Daniel Armbrust
+
+Project:
+https://github.com/daniel-armbrust/armbrust-blog-br
+
+License:
+https://creativecommons.org/licenses/by/4.0/
