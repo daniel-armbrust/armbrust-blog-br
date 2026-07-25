@@ -55,7 +55,9 @@ Algumas notas sobre VNICs, extraídas da documentação oficial ["Virtual Networ
 
 Considere o exemplo a seguir:
 
-![VNIC #1](img/oci-vnic-1.png)
+<a href="img/oci-vnic-1.png" class="glightbox">
+    <img src="img/oci-vnic-1.png" alt="VNIC #1">
+</a>
 
 O primeiro ponto importante dessa configuração é que, como já mencionado, um compute instance pode possuir múltiplas VNICs, sendo esse tipo de arquitetura bastante comum em cenários em que o compute é um firewall. 
 
@@ -65,4 +67,6 @@ Outro detalhe - talvez o mais importante - está relacionado ao roteamento entre
 
 Do ponto de vista das sub-redes, isso não representa um problema. A atenção deve estar voltada para o host, mais especificamente para a tabela de roteamento do sistema operacional. Esse comportamento não é configurado automaticamente e requer configuração manual.
 
-![VNIC #2](img/oci-vnic-2.png)
+<a href="img/oci-vnic-2.png" class="glightbox">
+    <img src="img/oci-vnic-2.png" alt="VNIC #2">
+</a>

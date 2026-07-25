@@ -13,7 +13,9 @@ O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e
 
 Esse é o firewall associado à sub-rede e aplicado a todas as suas VNICs. Como resultado, todo o tráfego de entrada (ingress) e saída (egress) é inspecionado com base nas regras definidas na Security List.
 
-![Security List #1](img/oci-seclist-1.png)
+<a href="img/oci-seclist-1.png" class="glightbox">
+    <img src="img/oci-seclist-1.png" alt="Security List #1">
+</a>
 
 Toda sub-rede deve ter pelo menos uma security list e pode ter no máximo, cinco security lists empilhadas. Nesse caso, todas as Security Lists são avaliadas em conjunto na busca por uma regra que permita o tráfego (ALLOW).
 
@@ -37,7 +39,9 @@ $ oci network security-list update \
 
 Este é o firewall que pode ser associado a uma VNIC ou a um grupo de VNICs. Nesse caso, a inspeção do tráfego é realizada no nível da VNIC, permitindo que cada VNIC possua suas próprias regras exclusivas para controle do tráfego.
 
-![Network Security Group (NSG) #1](img/oci-nsg-1.png)
+<a href="img/oci-nsg-1.png" class="glightbox">
+    <img src="img/oci-nsg-1.png" alt="Network Security Group (NSG) #1">
+</a>
 
 ```bash
 $ oci network nsg create \

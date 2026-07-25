@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
@@ -46,7 +46,9 @@
 <p>A sub-rede atua como uma unidade de configuração para os recursos criados dentro dela, mais especificamente para as VNICs que ali forem criadas. Isso significa que todas as VNICs e outros recursos em nuvem criados na mesma sub-rede compartilham a mesma <strong>Route Table</strong>, <strong>Security Lists</strong> e <strong>DHCP Options</strong>.</p>
 <p>Um aspecto relevante ao criar uma nova VCN, no que diz respeito ao roteamento, é que ela vem automaticamente com uma route table padrão (<code>Default Route Table for &lt;NOME-DA-VCN&gt;</code>). Todas as sub-redes criadas dentro dessa VCN, a menos que especificado de outra forma, utilizarão essa mesma route table. Isso pode dificultar a configuração do roteamento quando as sub-redes dessa VCN exigem configurações de roteamento de forma independente.</p>
 <p>Por exemplo, em uma VCN que contém duas sub-redes, uma pública e outra privada, <strong>é esperado que cada sub-rede tenha sua própria tabela de roteamento</strong>. A sub-rede pública precisa de uma rota padrão que direcione o tráfego para o <strong>Internet Gateway (IGW)</strong>, permitindo que os recursos criados recebam e enviem tráfego da Internet. Por outro lado, na sub-rede privada, a rota padrão costuma direcionar o tráfego para um <strong>NAT Gateway (NGW)</strong> ou para o <strong>DRG (Dynamic Routing Gateway)</strong>.</p>
-<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-vcn-1.png" alt="VCN Default Route Table #1"></p>
+<a href="img/oci-vcn-1.png" class="glightbox">
+    <img src="img/oci-vcn-1.png" alt="VCN Default Route Table #1">
+</a>
 <p><strong>A boa prática que fica é:</strong></p>
 <ol>
 <li>Criar a VCN.</li>
@@ -58,7 +60,9 @@
 <li>Criar a(s) sub-redes e utilizar a tabela de roteamento e a Security List criadas de forma independente para cada sub-rede.</li>
 </ol>
 <p>O resultado final, por exemplo, para cada VCN, será similar ao diagrama abaixo:</p>
-<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-vcn-2.png" alt="VCN Default Route Table #2"></p>
+<a href="img/oci-vcn-2.png" class="glightbox">
+    <img src="img/oci-vcn-2.png" alt="VCN Default Route Table #2">
+</a>
 <h2 id="comandos-de-exemplo">Comandos de Exemplo</h2>
 <h3 id="vcn">VCN</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network vcn create <span style="color:#ae81ff">\
@@ -223,7 +227,9 @@
 </span></span></code></pre></div><h2 id="fluxo-de-decisão-de-roteamento">Fluxo de Decisão de Roteamento</h2>
 <p>O fluxo de roteamento, ou a ordem de avaliação das regras de roteamento para alcançar uma rede diferente, inicia-se sempre no host e, em seguida, passa pela tabela de rotas da sub-rede.</p>
 <p>Considere o exemplo a seguir: um compute instance com uma VNIC configurada com o endereço IP <strong>10.100.20.10</strong> deseja acessar a Internet, por exemplo, o endereço <strong>8.8.8.8</strong>.</p>
-<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-subnet-1.png" alt="VCN Default Route Table #2"></p>
+<a href="img/oci-subnet-1.png" class="glightbox">
+    <img src="img/oci-subnet-1.png" alt="VCN Default Route Table #2">
+</a>
 <ol>
 <li>
 <p>A primeira decisão de roteamento ocorre dentro do host, onde o sistema operacional consulta sua própria tabela de rotas para determinar qual é o próximo destino do pacote. Nesse caso, a tabela de rotas do host aponta para o endereço IP <strong>10.100.20.1</strong>, ou seja, o next-hop é o gateway da sub-rede.</p>
@@ -242,6 +248,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

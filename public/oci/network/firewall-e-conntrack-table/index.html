@@ -3,22 +3,30 @@
   <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Firewall e Conntrack Table | Armbrust Blog</title>
+    <title>
+        
+            Firewall e Conntrack Table | Armbrust Blog
+        
+    </title>
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
   <body>
     <nav>
     <ul class="menu">
-      
+       
       <li><a href="/">Home</a></li>
-      
+       
       <li><a href="/oci/">OCI</a></li>
-      
+       
       <li><a href="/whoami/">whoami</a></li>
       
     </ul>
@@ -36,7 +44,9 @@
 <p>O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e 4 do modelo OSI, para controle de tráfego de entrada (ingress) e saída (egress). O funcionamento de ambos é idêntico: todo tráfego é bloqueado por padrão até que encontre uma regra que permita sua passagem (ALLOW). São eles:</p>
 <h3 id="security-list">Security List</h3>
 <p>Esse é o firewall associado à sub-rede e aplicado a todas as suas VNICs. Como resultado, todo o tráfego de entrada (ingress) e saída (egress) é inspecionado com base nas regras definidas na Security List.</p>
-<p><img src="/oci/network/firewall-e-conntrack-table/img/oci-seclist-1.png" alt="Security List #1"></p>
+<a href="img/oci-seclist-1.png" class="glightbox">
+    <img src="img/oci-seclist-1.png" alt="Security List #1">
+</a>
 <p>Toda sub-rede deve ter pelo menos uma security list e pode ter no máximo, cinco security lists empilhadas. Nesse caso, todas as Security Lists são avaliadas em conjunto na busca por uma regra que permita o tráfego (ALLOW).</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network security-list update <span style="color:#ae81ff">\
 </span></span></span><span style="display:flex;"><span>&gt; --security-list-id <span style="color:#e6db74">&#34;ocid1.securitylist.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
@@ -53,7 +63,9 @@
 </span></span></span><span style="display:flex;"><span>&gt; --force
 </span></span></code></pre></div><h3 id="network-security-group-nsg">Network Security Group (NSG)</h3>
 <p>Este é o firewall que pode ser associado a uma VNIC ou a um grupo de VNICs. Nesse caso, a inspeção do tráfego é realizada no nível da VNIC, permitindo que cada VNIC possua suas próprias regras exclusivas para controle do tráfego.</p>
-<p><img src="/oci/network/firewall-e-conntrack-table/img/oci-nsg-1.png" alt="Network Security Group (NSG) #1"></p>
+<a href="img/oci-nsg-1.png" class="glightbox">
+    <img src="img/oci-nsg-1.png" alt="Network Security Group (NSG) #1">
+</a>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network nsg create <span style="color:#ae81ff">\
 </span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
 </span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
@@ -111,6 +123,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

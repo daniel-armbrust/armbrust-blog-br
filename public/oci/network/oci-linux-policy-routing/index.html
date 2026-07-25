@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
@@ -43,7 +43,9 @@
 <h2 id="roteamento-por-destino">Roteamento por Destino</h2>
 <p>Por padrão, um roteador toma decisões de roteamento lendo o campo <strong>Destination Address</strong> do cabeçalho IP (e em teoria, mas não na prática, no campo TOS). Após obter o endereço IP presente no <strong>Destination Address</strong>, o próximo passo é consultar a tabela de rotas (<strong>route table</strong>), para determinar qual será a <strong>interface de rede de saída</strong> que será usada para <strong>encaminhar o pacote</strong>. Em outras palavras, a decisão de roteamento é baseada exclusivamente no <strong>endereço de destino</strong>, processo que também é chamado de <strong>Roteamento por Destino (destination-based routing)</strong>.</p>
 <p>Para facilitar, imagine que duas instâncias queiram se comunicar, cada uma em redes diferentes, e que exista um roteador Linux no meio interligando essas redes.</p>
-<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-rtb-1.png" alt="OCI Linux RT #1"></p>
+<a href="img/oci-linux-rtb-1.png" class="glightbox">
+    <img src="img/oci-linux-rtb-1.png" alt="OCI Linux RT #1">
+</a>
 <p>O fluxo de dados ocorre da seguinte maneira:</p>
 <ol>
 <li>
@@ -252,7 +254,9 @@
 </span></span></code></pre></div><p>Com essa regra, todo pacote que entra no host e tem como destino a porta 80/TCP será aceito. Qualquer outro pacote que não corresponda a essa regra será descartado pela <strong>policy padrão DROP</strong> que foi definida.</p>
 <h2 id="fluxo-dos-pacotes-dentro-da-caixa">Fluxo dos Pacotes dentro da Caixa</h2>
 <p>Para entender melhor a relação entre os estágios de processamento apresentados, vamos utilizar o diagrama abaixo:</p>
-<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-pbr-1.png" alt="OCI Linux PBR #1"></p>
+<a href="img/oci-linux-pbr-1.png" class="glightbox">
+    <img src="img/oci-linux-pbr-1.png" alt="OCI Linux PBR #1">
+</a>
 <p>De acordo com o diagrama, a partir do momento em que o pacote entra pela interface de rede <strong>eth0</strong>, ele pode seguir dois caminhos possíveis. Para cada caminho, diferentes estágios de processamento são utilizados, conforme descrito abaixo:</p>
 <h3 id="entrega-local-local-delivery">Entrega Local (local delivery)</h3>
 <p>Pacotes destinados ao próprio host, para ser entregue a um processo local em execução, percorrem os seguintes estágios em ordem:</p>
@@ -324,7 +328,9 @@
 <p><strong>Policy Route</strong> aqui tem um único objetivo: definir qual gateway de sub-rede deve ser utilizado para cada fluxo de tráfego.</p>
 <p>Independentemente do fabricante do seu firewall, seja ele um pfSense, Fortinet, Palo Alto, Check Point, entre outros, a lógica geral do processamento de pacotes e decisão de roteamento dentro da caixa é similar.</p>
 <p>De acordo com a topologia de referência que está sendo estudada, o firewall Linux possui três VNICs, cada uma conectada a uma sub-rede distinta no OCI. Cada sub-rede possui seu próprio bloco CIDR e seu respectivo gateway, o que torna necessário compreender como o Linux toma decisões de roteamento quando há múltiplas interfaces de rede disponíveis.</p>
-<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-pbr-2.png" alt="OCI Linux PBR #2"></p>
+<a href="img/oci-linux-pbr-2.png" class="glightbox">
+    <img src="img/oci-linux-pbr-2.png" alt="OCI Linux PBR #2">
+</a>
 <h3 id="vnic-appl-enp0s6">vnic-appl (enp0s6)</h3>
 <p>Esta é primeira VNIC (primary) que é configurada no momento de criação da instância.</p>
 <p>As primeiras regras de <code>ip rule</code>, instruem o Kernel Linux a consultar a tabela de rotas <code>main</code> para qualquer comunicação com a rede <code>10.70.0.0/16</code> (VCN-FIREWALL-INTERNO):</p>
@@ -383,7 +389,9 @@
 </span></span></code></pre></div><p>Esta é uma regra de NAT com a função de <strong>mascaramento</strong> (<code>MASQUERADE</code>). Ela é necessária porque, dentro do OCI, o tráfego com destino à Internet deve sair pelo endereço IP <code>10.90.20.60</code>, associado à VNIC <code>vnic-internet</code>.</p>
 <p>Neste caso, por exemplo, quando a comunicação é originada por um recurso da VCN-APPL-1 com destino à Internet, o pacote chega ao firewall e é processado pela cadeia de regras de <code>ip rule</code>.</p>
 <p>Após a decisão de roteamento (<code>POSTROUTING</code>) indicar a saída pelo gateway <code>10.90.20.1</code>, o pacote precisa ter seu endereço IP de origem alterado para o endereço IP da VNIC <code>vnic-internet</code>, ou seja, <code>10.90.20.60</code>.</p>
-<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-nat-1.png" alt="OCI Linux NAT #1"></p>
+<a href="img/oci-linux-nat-1.png" class="glightbox">
+    <img src="img/oci-linux-nat-1.png" alt="OCI Linux NAT #1">
+</a>
 <p>Essa tradução do endereço de origem é realizada pela regra de <code>iptables</code> apresentada acima.</p>
 <h2 id="nota-final">Nota Final</h2>
 <p>Todas essas configurações de <strong>Policy Routing</strong> da topologia de referencia podem ser encontradas no script localizado em <code>terraform/vm-firewall/scripts/rc-firewall.sh</code>.</p>
@@ -426,6 +434,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

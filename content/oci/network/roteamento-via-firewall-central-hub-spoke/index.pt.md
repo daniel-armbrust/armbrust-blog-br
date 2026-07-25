@@ -13,7 +13,9 @@ De forma simples, a ideia geral é: **forçar, de forma transparente, que todo o
 
 Para ilustrar o funcionamento dessa topologia, será utilizado o diagrama abaixo:
 
-![Hub & Spoke #1](img/hub-spoke-1.png)
+<a href="img/hub-spoke-1.png" class="glightbox">
+    <img src="img/hub-spoke-1.png" alt="Hub & Spoke #1">
+</a>
 
 ### Tabelas de Rotas
 

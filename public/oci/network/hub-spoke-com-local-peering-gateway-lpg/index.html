@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
@@ -46,14 +46,18 @@
 <p>Eu particularmente, ainda vejo diversas topologias que utilizam LPGs para interconectar VCNs. Por esse motivo, considero importante compreender como o roteamento funciona quando existe um LPG realizando a comunicação entre as VCNs.</p>
 <h2 id="drg-vs-lpg">DRG vs LPG</h2>
 <p>Além da forma utilizada para estabelecer a conectividade, as decisões de roteamento realizadas através do DRG diferem das utilizadas em cenários com LPG. Observe o diagrama abaixo:</p>
-<p><img src="/oci/network/hub-spoke-com-local-peering-gateway-lpg/img/drg-vs-lpg-1.png" alt="LPG #1"></p>
+<a href="img/drg-vs-lpg-1.png" class="glightbox">
+    <img src="img/drg-vs-lpg-1.png" alt="LPG #1">
+</a>
 <p>No caso do DRG, a decisão de roteamento ocorre quando o pacote sai da VCN e entra no DRG. Nesse momento, é consultada a tabela de rotas associada ao anexo responsável pela conexão entre a VCN e o DRG.</p>
 <p>Já no cenário com LPG, existem duas tabelas de rotas, uma em cada extremidade da conexão, que podem ou não existir. Nesse modelo, a decisão de roteamento ocorre quando o pacote sai da VCN de origem e entra na VCN de destino.</p>
 <p>Sim, com o LPG é possível definir uma tabela de rotas para cada extremidade da conexão. No exemplo, existe uma tabela de rotas aplicada para os pacotes que entram na <code>vcn-a</code> e outra para os pacotes que entram na <code>vcn-b</code>.</p>
 <p>Mas vale lembrar que essas tabelas de rotas associadas ao LPG só fazem sentido quando há a necessidade de desviar ou direcionar o tráfego para destinos específicos após a entrada do pacote na VCN de destino. Caso contrário, não é necessário associar nenhuma tabela, pois o próprio LPG já realiza automaticamente a divulgação das redes das VCNs conectadas.</p>
 <h2 id="fluxo-de-roteamento">Fluxo de Roteamento</h2>
 <p>Observe o diagrama abaixo, que ilustra o fluxo de roteamento entre os recursos de rede da topologia de exemplo:</p>
-<p><img src="/oci/network/hub-spoke-com-local-peering-gateway-lpg/img/oci-lpg-routing-1.png" alt="LPG #2"></p>
+<a href="img/oci-lpg-routing-1.png" class="glightbox">
+    <img src="img/oci-lpg-routing-1.png" alt="LPG #2">
+</a>
 <p>Suponha que a compute instance <code>vm-a</code> (<code>10.100.20.5</code>) precise se comunicar com a compute instance <code>vm-b</code> (<code>192.168.200.160</code>). As decisões de roteamento da origem para o destino, que fazem o tráfego passar pelo compute instance <code>firewall</code> (<code>192.168.200.160</code>), são:</p>
 <ol>
 <li>
@@ -143,6 +147,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

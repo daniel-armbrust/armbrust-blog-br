@@ -17,7 +17,9 @@ Um aspecto relevante ao criar uma nova VCN, no que diz respeito ao roteamento, �
 
 Por exemplo, em uma VCN que contém duas sub-redes, uma pública e outra privada, **é esperado que cada sub-rede tenha sua própria tabela de roteamento**. A sub-rede pública precisa de uma rota padrão que direcione o tráfego para o **Internet Gateway (IGW)**, permitindo que os recursos criados recebam e enviem tráfego da Internet. Por outro lado, na sub-rede privada, a rota padrão costuma direcionar o tráfego para um **NAT Gateway (NGW)** ou para o **DRG (Dynamic Routing Gateway)**.
 
-![VCN Default Route Table #1](img/oci-vcn-1.png)
+<a href="img/oci-vcn-1.png" class="glightbox">
+    <img src="img/oci-vcn-1.png" alt="VCN Default Route Table #1">
+</a>
 
 **A boa prática que fica é:**
 
@@ -31,7 +33,9 @@ Por exemplo, em uma VCN que contém duas sub-redes, uma pública e outra privada
 
 O resultado final, por exemplo, para cada VCN, será similar ao diagrama abaixo:
 
-![VCN Default Route Table #2](img/oci-vcn-2.png)
+<a href="img/oci-vcn-2.png" class="glightbox">
+    <img src="img/oci-vcn-2.png" alt="VCN Default Route Table #2">
+</a>
 
 ## Comandos de Exemplo
 
@@ -253,7 +257,9 @@ O fluxo de roteamento, ou a ordem de avaliação das regras de roteamento para a
 
 Considere o exemplo a seguir: um compute instance com uma VNIC configurada com o endereço IP **10.100.20.10** deseja acessar a Internet, por exemplo, o endereço **8.8.8.8**.
 
-![VCN Default Route Table #2](img/oci-subnet-1.png)
+<a href="img/oci-subnet-1.png" class="glightbox">
+    <img src="img/oci-subnet-1.png" alt="VCN Default Route Table #2">
+</a>
 
 1. A primeira decisão de roteamento ocorre dentro do host, onde o sistema operacional consulta sua própria tabela de rotas para determinar qual é o próximo destino do pacote. Nesse caso, a tabela de rotas do host aponta para o endereço IP **10.100.20.1**, ou seja, o next-hop é o gateway da sub-rede.
 

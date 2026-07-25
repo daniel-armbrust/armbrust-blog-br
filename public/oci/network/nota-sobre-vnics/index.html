@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
@@ -107,13 +107,16 @@
 </ol>
 <h2 id="vnics-em-múltiplas-sub-redes">VNICs em Múltiplas Sub-redes</h2>
 <p>Considere o exemplo a seguir:</p>
-<p><img src="/oci/network/nota-sobre-vnics/img/oci-vnic-1.png" alt="VNIC #1"></p>
+<a href="img/oci-vnic-1.png" class="glightbox">
+    <img src="img/oci-vnic-1.png" alt="VNIC #1">
+</a>
 <p>O primeiro ponto importante dessa configuração é que, como já mencionado, um compute instance pode possuir múltiplas VNICs, sendo esse tipo de arquitetura bastante comum em cenários em que o compute é um firewall.</p>
 <p>Um detalhe importante é que a VNIC é um recurso vinculado a um <strong>Availability Domain (AD)</strong>. Isso significa que todas as VNICs associadas a um compute instance devem estar no mesmo Availability Domain. Não é possível, por exemplo, que uma instância tenha uma VNIC no AD-1 e outra no AD-2.</p>
 <p>Outro detalhe - talvez o mais importante - está relacionado ao roteamento entre múltiplas VNICs, considerando que cada uma pode estar associada a uma sub-rede diferente. Como cada VNIC pertence a uma sub-rede distinta, cada sub-rede possui seu próprio gateway (primeiro IP do CIDR) e sua própria tabela de rotas associada.</p>
 <p>Do ponto de vista das sub-redes, isso não representa um problema. A atenção deve estar voltada para o host, mais especificamente para a tabela de roteamento do sistema operacional. Esse comportamento não é configurado automaticamente e requer configuração manual.</p>
-<p><img src="/oci/network/nota-sobre-vnics/img/oci-vnic-2.png" alt="VNIC #2"></p>
-
+<a href="img/oci-vnic-2.png" class="glightbox">
+    <img src="img/oci-vnic-2.png" alt="VNIC #2">
+</a>
 </main>
 
   <footer>
@@ -123,6 +126,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

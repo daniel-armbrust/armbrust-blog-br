@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/custom.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
     
   </head>
 
@@ -44,7 +44,9 @@
 <p>A topologia do tipo <strong>Hub &amp; Spoke</strong> é muito utilizada em ambientes corporativos, nos quais há, geralmente, a necessidade de um firewall mais sofisticado (VCN Hub), capaz de oferecer maior controle e proteção sobre o tráfego entre aplicações (VCNs Spoke), sejam entre VCNs ou no fluxo de dados entre o ambiente on-premises e o OCI.</p>
 <p>De forma simples, a ideia geral é: <strong>forçar, de forma transparente, que todo o tráfego entre aplicações passe por um firewall central.</strong></p>
 <p>Para ilustrar o funcionamento dessa topologia, será utilizado o diagrama abaixo:</p>
-<p><img src="/oci/network/roteamento-via-firewall-central-hub-spoke/img/hub-spoke-1.png" alt="Hub &amp; Spoke #1"></p>
+<a href="img/hub-spoke-1.png" class="glightbox">
+    <img src="img/hub-spoke-1.png" alt="Hub & Spoke #1">
+</a>
 <h3 id="tabelas-de-rotas">Tabelas de Rotas</h3>
 <p>Falando das tabelas de roteamento, temos as que seguem:</p>
 <ul>
@@ -152,6 +154,11 @@
 </div>
   
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<script>
+const lightbox = GLightbox();
+</script>
   </body>
 </html>
 

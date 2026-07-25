@@ -17,7 +17,9 @@ Eu particularmente, ainda vejo diversas topologias que utilizam LPGs para interc
 
 Além da forma utilizada para estabelecer a conectividade, as decisões de roteamento realizadas através do DRG diferem das utilizadas em cenários com LPG. Observe o diagrama abaixo:
 
-![LPG #1](img/drg-vs-lpg-1.png)
+<a href="img/drg-vs-lpg-1.png" class="glightbox">
+    <img src="img/drg-vs-lpg-1.png" alt="LPG #1">
+</a>
 
 No caso do DRG, a decisão de roteamento ocorre quando o pacote sai da VCN e entra no DRG. Nesse momento, é consultada a tabela de rotas associada ao anexo responsável pela conexão entre a VCN e o DRG.
 
@@ -31,10 +33,11 @@ Mas vale lembrar que essas tabelas de rotas associadas ao LPG só fazem sentido 
 
 Observe o diagrama abaixo, que ilustra o fluxo de roteamento entre os recursos de rede da topologia de exemplo:
 
-![LPG #2](img/oci-lpg-routing-1.png)
+<a href="img/oci-lpg-routing-1.png" class="glightbox">
+    <img src="img/oci-lpg-routing-1.png" alt="LPG #2">
+</a>
 
 Suponha que a compute instance `vm-a` (`10.100.20.5`) precise se comunicar com a compute instance `vm-b` (`192.168.200.160`). As decisões de roteamento da origem para o destino, que fazem o tráfego passar pelo compute instance `firewall` (`192.168.200.160`), são:
-
 
 1. A primeira decisão de roteamento ocorre no próprio host `10.100.20.5`. Nessa etapa o host determina o endereço IP e a interface de rede que será usada para enviar o tráfego. Normalmente existe uma **rota default** apontando para o gateway da sub‑rede (`10.100.20.1`).
 

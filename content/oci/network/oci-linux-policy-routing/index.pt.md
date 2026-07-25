@@ -11,7 +11,9 @@ Por padrão, um roteador toma decisões de roteamento lendo o campo **Destinatio
 
 Para facilitar, imagine que duas instâncias queiram se comunicar, cada uma em redes diferentes, e que exista um roteador Linux no meio interligando essas redes.
 
-![OCI Linux RT #1](img/oci-linux-rtb-1.png)
+<a href="img/oci-linux-rtb-1.png" class="glightbox">
+    <img src="img/oci-linux-rtb-1.png" alt="OCI Linux RT #1">
+</a>
 
 O fluxo de dados ocorre da seguinte maneira:
 
@@ -247,7 +249,9 @@ Com essa regra, todo pacote que entra no host e tem como destino a porta 80/TCP 
 
 Para entender melhor a relação entre os estágios de processamento apresentados, vamos utilizar o diagrama abaixo:
 
-![OCI Linux PBR #1](img/oci-linux-pbr-1.png)
+<a href="img/oci-linux-pbr-1.png" class="glightbox">
+    <img src="img/oci-linux-pbr-1.png" alt="OCI Linux PBR #1">
+</a>
 
 De acordo com o diagrama, a partir do momento em que o pacote entra pela interface de rede **eth0**, ele pode seguir dois caminhos possíveis. Para cada caminho, diferentes estágios de processamento são utilizados, conforme descrito abaixo:
 
@@ -413,7 +417,9 @@ Independentemente do fabricante do seu firewall, seja ele um pfSense, Fortinet, 
 
 De acordo com a topologia de referência que está sendo estudada, o firewall Linux possui três VNICs, cada uma conectada a uma sub-rede distinta no OCI. Cada sub-rede possui seu próprio bloco CIDR e seu respectivo gateway, o que torna necessário compreender como o Linux toma decisões de roteamento quando há múltiplas interfaces de rede disponíveis.
 
-![OCI Linux PBR #2](img/oci-linux-pbr-2.png)
+<a href="img/oci-linux-pbr-2.png" class="glightbox">
+    <img src="img/oci-linux-pbr-2.png" alt="OCI Linux PBR #2">
+</a>
 
 ### vnic-appl (enp0s6)
 
@@ -539,7 +545,9 @@ Neste caso, por exemplo, quando a comunicação é originada por um recurso da V
 
 Após a decisão de roteamento (`POSTROUTING`) indicar a saída pelo gateway `10.90.20.1`, o pacote precisa ter seu endereço IP de origem alterado para o endereço IP da VNIC `vnic-internet`, ou seja, `10.90.20.60`. 
 
-![OCI Linux NAT #1](img/oci-linux-nat-1.png)
+<a href="img/oci-linux-nat-1.png" class="glightbox">
+    <img src="img/oci-linux-nat-1.png" alt="OCI Linux NAT #1">
+</a>
 
 Essa tradução do endereço de origem é realizada pela regra de `iptables` apresentada acima.
 
