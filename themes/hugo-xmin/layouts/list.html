@@ -6,9 +6,12 @@
 
 {{ .Content }}
 
+{{ $pages := .RegularPagesRecursive }}
+{{ if .IsHome }}
+  {{ $pages = where .Site.RegularPages "Section" "in" (slice "oci" "ia" "linux" "python") }}
+{{ end }}
+
 <ul>
-  {{ $pages := .RegularPagesRecursive }}
-  {{ if .IsHome }}{{ $pages = .Site.RegularPages }}{{ end }}
   {{ range $pages.ByDate.Reverse }}
   <li>
     <span class="date">{{ .Date.Format "2006/01/02" }}</span>

@@ -14,6 +14,18 @@
                 href="http://localhost:1313/en/"
                 />
   </url><url>
+    <loc>http://localhost:1313/en/ia/</loc>
+    <xhtml:link
+                rel="alternate"
+                hreflang="pt-br"
+                href="http://localhost:1313/ia/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="http://localhost:1313/en/ia/"
+                />
+  </url><url>
     <loc>http://localhost:1313/en/oci/network/</loc>
     <xhtml:link
                 rel="alternate"

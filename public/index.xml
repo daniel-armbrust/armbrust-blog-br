@@ -71,5 +71,12 @@
       <guid>http://localhost:1313/oci/network/vcn-e-roteamento-de-subrede/</guid>
       <description>&lt;h2 id=&#34;vcn-virtual-cloud-network&#34;&gt;VCN (Virtual Cloud Network)&lt;/h2&gt;&#xA;&lt;p&gt;Uma das primeiras atividades ao iniciar os trabalhos com o OCI é configurar corretamente uma &lt;strong&gt;VCN (Virtual Cloud Network)&lt;/strong&gt; e seus componentes de rede. Pode-se afirmar que uma VCN é uma rede maior que pode ser subdividida em partes menores, chamadas de sub-redes (subnets).&lt;/p&gt;</description>
     </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/ia/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/ia/</guid>
+      <description></description>
+    </item>
   </channel>
 </rss>

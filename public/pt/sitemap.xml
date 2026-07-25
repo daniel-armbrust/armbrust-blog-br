@@ -223,6 +223,18 @@
                 href="http://localhost:1313/oci/network/vcn-e-roteamento-de-subrede/"
                 />
   </url><url>
+    <loc>http://localhost:1313/ia/</loc>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="http://localhost:1313/en/ia/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="pt-br"
+                href="http://localhost:1313/ia/"
+                />
+  </url><url>
     <loc>http://localhost:1313/whoami/</loc>
     <xhtml:link
                 rel="alternate"

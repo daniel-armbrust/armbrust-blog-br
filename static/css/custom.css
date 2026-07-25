@@ -24,13 +24,15 @@ body {
 }
 
 body {
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: "Inter", sans-serif;
     font-size: 18px;
     line-height: 1.75;
     color: #333;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    max-width: 1200px;
+    padding: 0 32px;
 }
 
 body > footer {
@@ -261,4 +263,20 @@ blockquote {
 
 ::selection {
     background: #d9ecff;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 0 16px;
+    }
+}
+
+article,
+main {
+    max-width: 1100px !important;
+    width: 100%;
+}
+
+main {
+    margin: 0 auto;
 }
