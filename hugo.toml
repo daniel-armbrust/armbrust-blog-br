@@ -1,4 +1,4 @@
-baseURL = "https://daniel-armbrust.github.io/"
+baseURL = "https://armbrust.blog.br/"
 languageCode = "pt-br"
 title = "Armbrust Blog"
 theme = "hugo-xmin"
