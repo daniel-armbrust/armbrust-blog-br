@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DNS Privado e Híbrido | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/ia/">IA</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">DNS Privado e Híbrido</span></h1>
+
+<h2 class="date">2026/07/24</h2>
+</div>
+
+<main>
+<h2 id="introdução">Introdução</h2>
+<p>Podemos dizer de forma bem resumida que o DNS ou Sistema de Nomes de Domínio, é um tipo de banco de dados distribuído e especializado em resolver nomes de domínios em endereços IP numéricos e vice-versa.</p>
+<p>Aqui quero apresentar alguns detalhes do serviço DNS Privado no qual é parte integrante de toda rede criada no OCI. Além disso, como você verá, o DNS Privado é um serviço fundamental em cenários de Nuvem Híbrida (mix de on-premises e cloud).</p>
+<h2 id="vcn-e-dns">VCN e DNS</h2>
+<p>A maioria dos recursos que são criados dentro de uma VCN necessitam de um serviço de DNS previamente configurado e funcional. Um bom exemplo é o próprio Serviço Database, que quando instruído para criar um novo banco de dados (DBCS), irá usar um serviço de DNS disponível para registrar o seu SCAN (Single Client Access Names):</p>
+<p><img src="img/dns-dbcs-1.png" alt="DNS DBCS #1"></p>
+<p>Sem um DNS disponível, o banco de dados não consegue registrar o &ldquo;SCAN DNS name&rdquo;:</p>
+<p><img src="img/dns-dbcs-2.png" alt="DNS DBCS #1"></p>
+<p>Esse relacionamento entre VCN e DNS é muito importante e garante o correto provisionamento dos recursos aqui no OCI. Para entender melhor, irei voltar um pouco atrás e mostrar alguns detalhes referente a criação de uma Virtual Cloud Network ou VCN.</p>
+<p>Sempre que criamos uma nova VCN, há a possibilidade de habilitar durante a sua criação o que chamamos de Resolução DNS (DNS Resolution):</p>
+<p><img src="img/dns-vcn-1.png" alt="DNS VCN #1"></p>
+<p>Esta opção <code>Use DNS hostnames in this VCN</code> quando habilitada, possibilita o registro e a resolução de nomes DNS (hostnames) dos recursos que forem criados nesta VCN. Ou seja, um recurso quando criado, poderá ser “encontrado” (endereçado) pelo seu nome (hostname), além do seu endereço IP.</p>
+<p>Perceba que existe também a possibilidade de se especificar um DNS Label:</p>
+<p><img src="img/dns-resolution-1.png" alt="DNS Resolution #1"></p>
+<p>Além da VCN, existe a mesma opção de <code>DNS Resolution</code> disponível ao criar uma sub-rede:</p>
+<p><img src="img/dns-vcn-2.png" alt="DNS Resolution #2"></p>
+<p>Igual às configurações da VCN, é possível especificar um <code>DNS Label</code> também para a sub-rede. A união desses dois DNS Labels (VCN e sub-rede), junto com o nome de domínio <code>oraclevcn.com</code>, formam então um nome de domínio único (DNS Domain Name) que será usado para os recursos aqui criados:</p>
+<p><img src="img/dns-resolution-2.png" alt="DNS Resolution #2"></p>
+<p>Não é obrigatório, porém é uma boa prática, que os DNS Labels sejam únicos entre as VCNs que você criar. Dentro de uma mesma VCN, o DNS Label das sub-redes devem ser únicos.</p>
+<p>Habilitando o DNS dessa forma, nos permite especificar um Hostname para uma instância computacional quando esta for criada. Como resultado, temos o que chamamos de <strong>nome de domínio completamente qualificado (FQDN – Fully Qualified Domain Name)</strong>:</p>
+<p><img src="img/dns-resolution-3.png" alt="DNS Resolution #3"></p>
+<p>É uma boa prática sempre utilizar o FQDN da instância quando se deseja enviar mensagens para um host. Sempre utilize nome ao invés do endereço IP.</p>
+<p>Em conjunto com todo esse processo, que possibilita o registro e a resolução de nomes pela VCN e sub-rede, o OCI criou e configurou o DNS Privado. Vamos entender mais como ele funciona.</p>
+<h2 id="dns-privado">DNS Privado</h2>
+<p><a href="https://blogs.oracle.com/lad-cloud-experts-pt/dns-privado-e-hibrido">DNS Privado</a> é o serviço de DNS do OCI usado exclusivamente para registro e “resolução de nomes internos”. Quando dizemos “nomes internos”, estamos nos referindo a todos os nomes de hosts (hostnames) que não estão diretamente expostos na Internet (rede pública).</p>
+<p>Quando a VCN foi criada, com a opção <code>Use DNS hostnames in this VCN</code> habilitada, também foram criados os seguintes recursos que fazem parte do DNS Privado:</p>
+<ul>
+<li>
+<p><strong>Zona DNS</strong></p>
+<ul>
+<li>Uma Zona DNS é o local onde são armazenados os <em><a href="https://docs.oracle.com/pt-br/iaas/Content/DNS/Tasks/privatedns.htm#privatedns_topic_supported_resource_records">Registros de Recursos</a></em>.</li>
+</ul>
+</li>
+<li>
+<p><strong>View</strong></p>
+<ul>
+<li>Usado para agrupar diferentes Zonas. Ou seja, dentro de uma View podem existir diferentes Zonas de diferentes nomes (os nomes devem ser exclusivos). Porém, uma Zona pode estar associada a diferentes Views.</li>
+</ul>
+</li>
+<li>
+<p><strong>DNS Resolver</strong></p>
+<ul>
+<li>É um endereço IP (endpoint) que possui a função exclusiva de responder às consultas DNS que são feitas. Por padrão, o resolvedor utiliza o endereço IP <code>169.254.169.254</code> que só pode ser acessado pelos recursos de uma sub-rede.</li>
+</ul>
+</li>
+</ul>
+<p>Vamos entender a relação dos recursos que foram citados para assim, entender melhor o serviço.</p>
+<h3 id="zona-dns">Zona DNS</h3>
+<p>Uma das características do <em><a href="https://docs.oracle.com/pt-br/iaas/Content/DNS/Tasks/privatedns.htm">DNS</a></em> é ser um banco de dados de uso mais específico. Quando eu digo &ldquo;mais específico&rdquo;, quero dizer basicamente que o serviço só é capaz de manipular as informações referente ao nome dos hosts e endereços IPs. Além de que, no DNS, NÃO organizamos os dados em Tabelas como é feito em um banco de dados tradicional. No DNS, os dados são criados e organizados dentro do que chamamos de Zona DNS.</p>
+<p>No OCI, uma Zona DNS pode ser <em>Pública</em> ou <em>Privada</em>:</p>
+<p><img src="img/zona-publica-privada.png" alt="Zona DNS #1"></p>
+<p>Uma <em>Zona DNS Pública</em>, tem o propósito de armazenar os registros que serão expostos publicamente na Internet. Já a <em>Zona Privada</em>, só fornece respostas para os clientes que podem acessá-la por meio de uma VCN (visualização interna).</p>
+<p>Para o exemplo que foi apresentado, sobre a criação de uma VCN e sub-rede, o OCI criou automaticamente duas <em>Zonas Privadas</em>:</p>
+<p><img src="img/NEW_private-zone-1.png" alt="Zona DNS Privada #1"></p>
+<p>A zona de nome <code>subnprv1.vcna.oraclevcn.com</code> foi formada pela junção dos <code>DNS Labels</code> especificados junto com o domínio <code>oraclevcn.com</code>. Essa zona irá armazenar os registros dos recursos que são criados nesta sub-rede. Veja abaixo o exemplo de uma instância criada de nome <code>srv1</code> e seu endereço IP correspondente:</p>
+<p><img src="img/NEW_private-zone-2.png" alt="Zona DNS Privada #2"></p>
+<p>Já a outra zona de nome <code>100.10.in-addr.arpa</code>, será usada exclusivamente para armazenar os <strong>Registros Reversos (PTR)</strong> dos recursos. Estas servem para resolver o nome de forma inversa, pois resolve um endereço IP de volta para um <em>nome de domínio totalmente qualificado (FQDN)</em>:</p>
+<p><img src="img/NEW_private-zone-3.png" alt="Zona DNS Privada #3"></p>
+<p>Toda Zona criada e gerenciada pelo OCI, é protegida (protected). Com isso, seus registros podem ser visualizados, porém não é possível adicionar novos ou modificar os existentes.</p>
+<p><img src="img/NEW_private-zone-4.png" alt="Zona DNS Privada #4"></p>
+<p><img src="img/NEW_private-zone-6.png" alt="Zona DNS Privada #5"></p>
+<h3 id="view">View</h3>
+<p>Uma View tem o propósito de agrupar diferentes Zonas. Ao criamos uma Zona Privada, é obrigatório que essa pertença a uma Private View:</p>
+<p><img src="img/NEW_private-view-1.png" alt="DNS Private View #1"></p>
+<p>A VCN que foi criada como exemplo, também criou a sua própria Private View, adicionando a ela, as duas Zonas que vimos anteriormente:</p>
+<p><img src="img/NEW_private-view-2.png" alt="DNS Private View #2"></p>
+<p><img src="img/NEW_private-view-3.png" alt="DNS Private View #3"></p>
+<h3 id="dns-resolver">DNS Resolver</h3>
+<p>O DNS Resolver é o componente que consegue resolver e responder por uma consulta de DNS que é feita.</p>
+<p>Sabemos que os dispositivos em uma rede de computadores usam o endereço IP para se comunicar uns com os outros. O DNS é um serviço que, basicamente, possibilita nomearmos os dispositivos de uma rede (hostname). Ou seja, o nome passa a ser mais uma forma de endereçamento.</p>
+<p>Assim, quando usamos um nome para encontrar um recurso, usamos também um DNS Resolver para realizar essa tradução de nome para endereço IP, ou vice-versa.</p>
+<p>Para você saber, o OCI utiliza a rede <code>169.254.0.0/16</code> para disponibilizar parte de seus serviços. Os endereços dessa rede são acessíveis somente pelos recursos da sub-rede. Alguns desses endereços são usados em <em><a href="https://docs.oracle.com/pt-br/iaas/Content/Block/Tasks/connectingtoavolume.htm#Connecting_to_a_Volume">conexões do tipo iSCSI</a></em> (usado pelo serviço de <em><a href="https://docs.oracle.com/pt-br/iaas/Content/Block/Concepts/overview.htm">Block Volume</a></em>), para visualizar os <em><a href="https://docs.oracle.com/pt-br/iaas/Content/Compute/Tasks/gettingmetadata.htm">metadados de uma instância</a></em> e também para o DNS Resolver.</p>
+<p>Os endereços que fazem parte da rede <code>169.254.0.0/16</code> são acessíveis somente pelos recursos existentes em uma sub-rede. O OCI disponibiliza alguns serviços, de maneira interna à sub-rede, através dos IPs disponíveis nesta rede. Essa rede de endereços possui o nome de <em><a href="https://en.wikipedia.org/wiki/Link-local_address">Link-Local Addresses</a></em>.</p>
+<p>Por padrão, o DNS Resolver é disponibilizado no endereço IP <code>169.254.169.254</code>, e usado pelas instâncias que forem criadas, caso não seja especificado o contrário. Veja abaixo, o conteúdo do arquivo /etc/resolv.conf que faz uso deste resolver em um Oracle Linux:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@servidor1 ~<span style="color:#f92672">]</span>$ grep nameserver /etc/resolv.conf
+</span></span><span style="display:flex;"><span>nameserver 169.254.169.254
+</span></span></code></pre></div><p>Este DNS Resolver além de ser capaz de resolver qualquer nome na Internet, consegue resolver também os registros da zona que foi criada em conjunto com a sub-rede. Abaixo a resolução de nomes em ação através do IP <code>169.254.169.254</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@servidor1 ~<span style="color:#f92672">]</span>$ nslookup
+</span></span><span style="display:flex;"><span>&gt; server 169.254.169.254
+</span></span><span style="display:flex;"><span>Default server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; registro.br
+</span></span><span style="display:flex;"><span>Server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>Name: registro.br
+</span></span><span style="display:flex;"><span>Address: 200.160.2.3
+</span></span><span style="display:flex;"><span>Name: registro.br
+</span></span><span style="display:flex;"><span>Address: 2001:12ff:0:2::3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; servidor1
+</span></span><span style="display:flex;"><span>Server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>Name: servidor1.subprv1.vcna.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 10.0.1.159
+</span></span></code></pre></div><h2 id="mais-sobre-o-dns-resolver">Mais sobre o DNS Resolver</h2>
+<p>O DNS Resolver possui diversas outras configurações que podem ser acessadas por dentro da VCN:</p>
+<p><img src="img/NEW_dns-resolver-1.png" alt="DNS Resolver #1"></p>
+<p>Nas suas configurações, são apresentadas duas informações importantes:</p>
+<ul>
+<li>
+<p><strong>Dedicated virtual cloud network</strong></p>
+<ul>
+<li>Indica a VCN no qual este DNS Resolver pertence</li>
+</ul>
+</li>
+<li>
+<p><strong>Default Private View</strong></p>
+<ul>
+<li>Indica a View privada padrão que foi criada e está associada a este DNS Resolver.</li>
+</ul>
+</li>
+</ul>
+<p><img src="img/NEW_dns-resolver-2.png" alt="DNS Resolver #2"></p>
+<p>A VCN quando criada com suporte a DNS, também criou e associou em conjunto um DNS Resolver. É obrigatório que um DNS Resolver esteja associado a uma VCN, e também a um Private View. Não se preocupe, todo esse processo é contemplado automaticamente durante a criação da VCN.</p>
+<p>De uma forma simples, temos abaixo os componentes do DNS Privado para a VCN que foi criada:</p>
+<p><img src="img/dns-resolver_arch-1.png" alt="DNS Resolver #2"></p>
+<p>O desenho mostra uma Private View que agrupa duas zonas de nomes <code>subnprv1.vcna.oraclevcn.com</code> e <code>100.10.in-addr.arpa</code>. Essas são usadas para armazenar os hostnames e demais registros DNS que forem criados nesta sub-rede. Um detalhe importante é que, uma Zona Privada não pode existir sem pertencer a uma Private View. Isto é obrigatório!</p>
+<p>Uma ou mais Private Views podem estar associadas a um ou mais DNS Resolvers. Isso irá possibilitar o DNS Resolver em responder ou, resolver os nomes dos registros existentes nas Zonas contidas em suas respectivas Private Views.</p>
+<p>Ao criarmos uma outra VCN, por exemplo, uma outra Private View é criada em conjunto. Se a intenção é possibilitar que a VCN-A resolva os nomes da VCN-B, deve-se associar a Private View da VCN-B em VCN-A. Isto pode ser feito dentro das configurações do DNS Resolver da VCN-A, pela associação das Views. Veja:</p>
+<p><img src="img/NEW_associated-1.png" alt="DNS Resolver #3"></p>
+<p>Simples! Agora, o DNS Resolver da VCN-A consegue resolver os nomes contidos nas zonas da VCN-B.</p>
+<p>Uma outra opção importante quando configuramos o DNS Privado, diz respeito ao endereço IP do resolvedor. Já sabemos que, por padrão, o DNS Privado utiliza do endereço IP <code>169.254.169.254</code> e que este é um IP não roteável. Ou seja, ele só é acessível pelos recursos de dentro da sub-rede.</p>
+<p>Uma das ações ao interligarmos cloud e on-premises, é possibilitar a correta resolução de nomes entre esses dois ambientes. Para que o ambiente on-premises consiga resolver os nomes dos recursos existentes na cloud, primeiramente é necessário que ambos os DNS &ldquo;conversem&rdquo; via rede. Para isso, o DNS Resolver precisa de um endereço IP roteável que pode ser criado através da opção Endpoints:</p>
+<p><img src="img/NEW_listening-endpoint-1.png" alt="DNS Resolver #4"></p>
+<p>Como é possível verificar, a criação do endpoint exige uma sub-rede. Dessa sub-rede, será usado um endereço IP no qual você pode especificar ou deixar o OCI escolher um que esteja livre para utilização. Também é possível especificar um <em>Network Security Group (NSG)</em> para filtrar o tráfego (firewall), se este for o caso.</p>
+<p>Pelo endpoint, que agora pode ser acessado diretamente (<code>10.0.2.5</code>), é possível configurar o servidor DNS localizado no on-premises e este passar a resolver também, qualquer nome que termine em <code>oraclevcn.com</code>. Essa técnica é chamada de <em><a href="https://social.technet.microsoft.com/wiki/contents/articles/2517.dns-conditional-forwarding-ou-encaminhadores-condicionais-pt-br.aspx">&ldquo;conditional forwarding&rdquo;</a></em>:</p>
+<p><img src="img/dns-resolver_arch-2.png" alt="DNS Resolver #5"></p>
+<p>No DNS Resolver, um endpoint pode ser do tipo Listening ou Forwarding. Já vimos que o modo Listening, irá disponibilizar um IP da sub-rede que pode ser usado para responder às consultas DNS externas (Internet) e também das Zonas associadas pelas Private Views.</p>
+<p>Já o modo Forwarding permite encaminhar as consultas para um outro servidor DNS externo. Sim, ele também implementa a técnica de <em><a href="https://social.technet.microsoft.com/wiki/contents/articles/2517.dns-conditional-forwarding-ou-encaminhadores-condicionais-pt-br.aspx">&ldquo;conditional forwarding&rdquo;</a></em> que acabamos de descrever. A criação de um endpoint do tipo Forwarding segue o mesmo padrão:</p>
+<p><img src="img/NEW_forwarding-endpoint-1.png" alt="DNS Resolver #6"></p>
+<p>Além da criação do endpoint Forwarding, deve ser criado algumas regras (rules) para que a resolução de nomes seja direcionada para um outro servidor DNS:</p>
+<p><img src="img/NEW_forwarding-endpoint-2.png" alt="DNS Resolver #7"></p>
+<p>Neste exemplo, quando o DNS Resolver (<code>10.0.2.5</code>) receber uma consulta para resolver um nome que faz parte do domínio <code>meudominio.local</code>, este pedido será então encaminhado para o servidor DNS <code>192.168.1.10</code> realizar a resolução (&ldquo;conditional forwarding&rdquo;).</p>
+<p><img src="img/NEW_dns-resolver-arch-3.png" alt="DNS Resolver #7"></p>
+<p>Nesta comunicação, o endereço IP do Forwarding se torna o cliente. Isso quer dizer que a conexão com destino ao on-premises, tem como origem o endereço IP do Forwarding (<code>10.0.2.6</code>).</p>
+<p>Além do on-premises, o Forwarding é também configurado dessa maneira quando se quer resolver nomes dos recursos de uma outra região.</p>
+<h2 id="casos-de-uso">Casos de Uso</h2>
+<h3 id="cenário-1---resolução-de-nomes-via-conditional-forwarding">Cenário #1 - Resolução de nomes via &ldquo;conditional forwarding&rdquo;</h3>
+<p>Este é o primeiro cenário de exemplo que demonstra a resolução de nomes entre on-premises e cloud.</p>
+<p>Observe o desenho abaixo:</p>
+<p><img src="img/NEW_winad-1.png" alt="Casos de Uso #1"></p>
+<p>Do lado do OCI, há um servidor DNS secundário (winad-1) que necessita também de resolver os nomes da cloud. Através da configuração do &ldquo;conditional forwarding&rdquo;, é possível direcionar as consultas do domínio <code>oraclevcn.com</code> para o DNS Resolver <code>169.254.169.254</code>:</p>
+<p><img src="img/winad-conditional-forward-1.png" alt="Casos de Uso #2"></p>
+<p>Após essa configuração, o servidor DNS <code>10.0.4.2</code> já consegue resolver os nomes contidos na cloud:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-powershell" data-lang="powershell"><span style="display:flex;"><span>C:\&gt;nslookup - <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">Default</span> Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; winad-<span style="color:#ae81ff">1</span>.subnprv3.vcna.oraclevcn.com
+</span></span><span style="display:flex;"><span>Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer<span style="color:#960050;background-color:#1e0010">:</span>
+</span></span><span style="display:flex;"><span>Name<span style="color:#960050;background-color:#1e0010">:</span> winad-<span style="color:#ae81ff">1</span>.subnprv3.vcna.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.0</span>.4.2
+</span></span></code></pre></div><h3 id="cenário-2---resolução-de-nomes-on-premises-e-oci">Cenário #2 - Resolução de nomes On-Premises e OCI</h3>
+<p>Observe a imagem de exemplo abaixo:</p>
+<p><img src="img/NEW_dns-hibrido-2.png" alt="Casos de Uso #3"></p>
+<p>Este é um cenário típico onde já existe um servidor DNS Master (primário) do lado do on-premises, e um servidor DNS Slave (secundário) no OCI. O objetivo final é possibilitar a resolução de nomes de ambos os ambientes (cloud e on-premises), até porque existem aplicações no on-premises que necessitam acessar o banco de dados (dbcs-1) existente na cloud.</p>
+<p>Um detalhe importante. Para obter alta disponibilidade e escalabilidade, todo acesso ao banco de dados que é formado por um ou mais servidores (<em><a href="https://www.oracle.com/br/database/real-application-clusters/">RAC – Real Application Clusters</a></em>), deve ser via nome <em><a href="https://docs.oracle.com/database/121/JJDBC/scan.htm#JJDBC29151">SCAN (Single Client Access Names)</a></em> e nunca diretamente por um endereço IP:</p>
+<p><img src="img/NEW_scan-1.png" alt="Casos de Uso #4"></p>
+<p>O primeiro item é a configuração do &ldquo;conditional forwarding&rdquo; no DNS Slave. Para resolver qualquer nome do domínio <code>oraclevcn.com</code>, a solicitação deve ser repassada para o DNS Resolver da sub-rede (<code>169.254.169.254</code>):</p>
+<p><img src="img/NEW_forward-1.png" alt="Casos de Uso #5"></p>
+<p>Em seguida, associa-se a Private View da VCN-SPOKE à VCN-HUB:</p>
+<p><img src="img/NEW_private-view-4.png" alt="Casos de Uso #6"></p>
+<p>Essa configuração já possibilita a resolução do <em><a href="https://docs.oracle.com/database/121/JJDBC/scan.htm#JJDBC29151">SCAN</a></em> a partir do DNS Slave:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-powershell" data-lang="powershell"><span style="display:flex;"><span>C:\&gt;nslookup - <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">Default</span> Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; dbcs-<span style="color:#ae81ff">1</span>-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.0</span>.4.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer<span style="color:#960050;background-color:#1e0010">:</span>
+</span></span><span style="display:flex;"><span>Name<span style="color:#960050;background-color:#1e0010">:</span> dbcs-<span style="color:#ae81ff">1</span>-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Addresses<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.1</span>.1.51
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">10.1</span>.1.33
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">10.1</span>.1.101
+</span></span></code></pre></div><p>No DNS Master, o &ldquo;conditional forwarding&rdquo; para o domínio <code>oraclevcn.com</code>, deve usar o endereço IP do DNS Slave (<code>10.0.4.2</code>):</p>
+<p><img src="img/NEW_forward-2.png" alt="Casos de Uso #7"></p>
+<p>Feitos essas configurações, é possível agora simplificar a resolução do <em><a href="https://docs.oracle.com/database/121/JJDBC/scan.htm#JJDBC29151">SCAN</a></em> para um nome que pertence ao domínio <code>meudominio.local</code>, que já é existente no on-premises:</p>
+<p><img src="img/NEW_dns-config-1.png" alt="Casos de Uso #8"></p>
+<p>Pronto! A partir de agora o on-premises resolve corretamente o <em><a href="https://docs.oracle.com/database/121/JJDBC/scan.htm#JJDBC29151">SCAN</a></em> do banco de dados de exemplo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-powershell" data-lang="powershell"><span style="display:flex;"><span>C:\&gt;nslookup - <span style="color:#ae81ff">192.168</span>.1.10
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">Default</span> Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">192.168</span>.1.10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; dbcs-scan.meudominio.local
+</span></span><span style="display:flex;"><span>Server<span style="color:#960050;background-color:#1e0010">:</span> UnKnown
+</span></span><span style="display:flex;"><span>Address<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">192.168</span>.1.10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Name<span style="color:#960050;background-color:#1e0010">:</span> dbcs-<span style="color:#ae81ff">1</span>-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Addresses<span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#ae81ff">10.1</span>.1.33
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">10.1</span>.1.101
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">10.1</span>.1.51
+</span></span><span style="display:flex;"><span>Aliases<span style="color:#960050;background-color:#1e0010">:</span> dbcs-scan.meudominio.local
+</span></span></code></pre></div><p>Por último, se houver a necessidade dos recursos da VCN-SPOKE em resolver os nomes do domínio <code>meudominio.local</code>, basta a configuração de uma regra que utiliza um endpoint do tipo <em>Forwarding</em> no DNS Resolver da VCN-SPOKE:</p>
+<p><img src="img/NEW_forward-3.png" alt="Casos de Uso #9"></p>
+<p>Abaixo, um teste a partir do SRV-2 (<code>10.1.1.109</code>):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@srv-2 ~<span style="color:#f92672">]</span>$ nslookup dbcs-scan.meudominio.local
+</span></span><span style="display:flex;"><span>Server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>dbcs-scan.meudominio.local canonical name <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>dbcs-1-scan.subnprv1.vcnspoke.oraclevcn.com.
+</span></span><span style="display:flex;"><span>Name: dbcs-1-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 10.1.1.51
+</span></span><span style="display:flex;"><span>Name: dbcs-1-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 10.1.1.101
+</span></span><span style="display:flex;"><span>Name: dbcs-1-scan.subnprv1.vcnspoke.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 10.1.1.33
+</span></span></code></pre></div><h3 id="cenário-3---resolução-de-nomes-multi-região">Cenário #3 - Resolução de nomes multi-região</h3>
+<p>Para o último cenário de exemplo, temos duas regiões distintas (<code>sa-saopaulo-1</code> e <code>sa-vinhedo-1</code>) conectadas por um <em><a href="https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/scenario_e.htm">RPC (Remote Peering Connection)</a></em>.</p>
+<p>Observe a imagem abaixo e note que a região de Vinhedo (<code>sa-vinhedo-1</code>) foi escolhida para <em>Recuperação de Desastre (DR – Disaster Recovery)</em>:</p>
+<p><img src="img/dns_dr-1.png" alt="Casos de Uso #10"></p>
+<p>No exemplo, temos duas VCNs em cada região. Um banco de dados primário (dbcs-primary) em São Paulo (<code>sa-saopaulo-1</code>) e sua versão standby (dbcs-standby) em Vinhedo (<code>sa-vinhedo-1</code>). Há um <em><a href="https://docs.oracle.com/pt-br/iaas/dbcs/doc/use-oracle-data-guard-db-system.html">Data Guard</a></em> configurado entre os bancos que garante a alta disponibilidade e recuperação rápida, caso exista qualquer problema na região de São Paulo.</p>
+<p>O objetivo final é poder, de maneira correta, resolver os nomes dos recursos existentes em ambas as <em><a href="https://docs.oracle.com/pt-br/iaas/Content/General/Concepts/regions.htm">regiões</a></em>.</p>
+<p>A VCN-SP existente na região de São Paulo (<code>sa-saopaulo-1</code>), possui o domínio <code>vcnsp.oraclevcn.com</code> para os seus recursos. Já a VCN-DR em Vinhedo (<code>sa-vinhedo-1</code>), possui o domínio <code>vcndr.oraclevcn.com</code>.</p>
+<p>Começarei pelo DNS Resolver da VCN-SP, criando um endpoint do tipo Listening e outro do tipo Forwarding:</p>
+<p><img src="img/dns_forward-region-1.png" alt="Casos de Uso #11"></p>
+<p>O mesmo procedimento é feito para a VCN-DR na região de Vinhedo:</p>
+<p><img src="img/dns_forward-region-2.png" alt="Casos de Uso #12"></p>
+<p>De volta em VCN-SP, será configurado uma regra para resolução de qualquer nome do domínio <code>vcndr.oraclevcn.com</code> que utiliza o endpoint Listening da VCN-DR (<code>192.168.2.5</code>):</p>
+<p><img src="img/dns_forward-region-3.png" alt="Casos de Uso #13"></p>
+<p>Na VCN-DR, o procedimento é o mesmo só mudando para o domínio <code>vcnsp.oraclevcn.com</code> e o endpoint Listening da VCN-SP (<code>10.0.2.5</code>):</p>
+<p><img src="img/dns_forward-region-4.png" alt="Casos de Uso #14"></p>
+<p>O teste será resolver o nome <em><a href="https://docs.oracle.com/database/121/JJDBC/scan.htm#JJDBC29151">SCAN</a></em> do banco de dados (dbcs-standby) localizado na VCN-DR a partir da VCN-SP:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@srv-app-1 ~<span style="color:#f92672">]</span>$ nslookup dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.247
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.88
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.24
+</span></span></code></pre></div><p>Para finalizar é possível através do DNS Privado, criar a zona <code>meudominio.local</code> com os seus devidos registros. O exemplo abaixo demonstra a criação do registro do tipo CNAME <code>scan-dr.meudominio.local</code>:</p>
+<p><img src="img/dns_forward-region-5.png" alt="Casos de Uso #15"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@srv-app-1 ~<span style="color:#f92672">]</span>$ nslookup scan-dr.meudominio.local
+</span></span><span style="display:flex;"><span>Server: 169.254.169.254
+</span></span><span style="display:flex;"><span>Address: 169.254.169.254#53
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>scan-dr.meudominio.local canonical name <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>dbcs-standby-scan.subndr.vcndr.oraclevcn.com.
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.88
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.24
+</span></span><span style="display:flex;"><span>Name: dbcs-standby-scan.subndr.vcndr.oraclevcn.com
+</span></span><span style="display:flex;"><span>Address: 192.168.1.247
+</span></span></code></pre></div><h2 id="dns-recursivo-público-e-gratuito">DNS Recursivo, público e gratuito</h2>
+<p>A Oracle, igual a outros provedores, possui um serviço de <em><a href="https://docs.oracle.com/pt-br/iaas/Content/DNS/Concepts/recursive-dns.htm">DNS Recursivo</a></em> público e gratuito. Se você precisa de um DNS para resolver nomes da Internet pública, convido você a utilizar os seguintes endereços:</p>
+<ul>
+<li><strong>216.146.35.35</strong></li>
+<li><strong>216.146.36.36</strong></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@srv-app-1 ~<span style="color:#f92672">]</span>$ nslookup - 216.146.35.35
+</span></span><span style="display:flex;"><span>&gt; registro.br
+</span></span><span style="display:flex;"><span>Server: 216.146.35.35
+</span></span><span style="display:flex;"><span>Address: 216.146.35.35#53
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Non-authoritative answer:
+</span></span><span style="display:flex;"><span>Name: registro.br
+</span></span><span style="display:flex;"><span>Address: 200.160.2.3
+</span></span><span style="display:flex;"><span>Name: registro.br
+</span></span><span style="display:flex;"><span>Address: 2001:12ff:0:2::3
+</span></span></code></pre></div>
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+

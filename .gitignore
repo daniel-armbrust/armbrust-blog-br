@@ -1,3 +1,20 @@
+# ----------------------------
+# Hugo
+# ----------------------------
+
+public/
+resources/_gen/
+.hugo_build.lock
+
+# Se usar o Hugo Modules
+go.sum
+go.work
+go.work.sum
+
+# ----------------------------
+# Python
+# ----------------------------
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -5,15 +22,46 @@ __pycache__/
 venv/
 env/
 ENV/
-site/
+*.egg-info/
+
+# ----------------------------
+# Build
+# ----------------------------
+
 build/
 dist/
-*.egg-info/
 .cache/
+
+# ----------------------------
+# IDEs
+# ----------------------------
+
 .idea/
+
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# ----------------------------
+# Sistema Operacional
+# ----------------------------
+
 .DS_Store
 Thumbs.db
+
+# ----------------------------
+# Logs
+# ----------------------------
+
 *.log
+
+# ----------------------------
+# Arquivos temporários
+# ----------------------------
+
+*.swp
+*.swo
+*~
+
+node_modules/
+package-lock.json

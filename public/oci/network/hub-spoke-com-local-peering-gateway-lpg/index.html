@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hub &amp; Spoke com Local Peering Gateway (LPG) | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Hub &amp; Spoke com Local Peering Gateway (LPG)</span></h1>
+
+<h2 class="date">2025/11/03</h2>
+</div>
+
+<main>
+<h2 id="local-peering-gateway-lpg">Local Peering Gateway (LPG)</h2>
+<p>O <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/localVCNpeering.htm">Local Peering Gateway (LPG)</a> é utilizado para conectar duas VCNs diretamente.</p>
+<p>Hoje, já não é mais recomendado utilizar LPGs para conectar VCNs pois, a função que o LPG desempenha foi substituída pelo <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDRGs.htm">DRG</a>, que é o modo atualmente recomendado para se construír topologias de redes no OCI.</p>
+<p>Eu particularmente, ainda vejo diversas topologias que utilizam LPGs para interconectar VCNs. Por esse motivo, considero importante compreender como o roteamento funciona quando existe um LPG realizando a comunicação entre as VCNs.</p>
+<h2 id="drg-vs-lpg">DRG vs LPG</h2>
+<p>Além da forma utilizada para estabelecer a conectividade, as decisões de roteamento realizadas através do DRG diferem das utilizadas em cenários com LPG. Observe o diagrama abaixo:</p>
+<p><img src="/oci/network/hub-spoke-com-local-peering-gateway-lpg/img/drg-vs-lpg-1.png" alt="LPG #1"></p>
+<p>No caso do DRG, a decisão de roteamento ocorre quando o pacote sai da VCN e entra no DRG. Nesse momento, é consultada a tabela de rotas associada ao anexo responsável pela conexão entre a VCN e o DRG.</p>
+<p>Já no cenário com LPG, existem duas tabelas de rotas, uma em cada extremidade da conexão, que podem ou não existir. Nesse modelo, a decisão de roteamento ocorre quando o pacote sai da VCN de origem e entra na VCN de destino.</p>
+<p>Sim, com o LPG é possível definir uma tabela de rotas para cada extremidade da conexão. No exemplo, existe uma tabela de rotas aplicada para os pacotes que entram na <code>vcn-a</code> e outra para os pacotes que entram na <code>vcn-b</code>.</p>
+<p>Mas vale lembrar que essas tabelas de rotas associadas ao LPG só fazem sentido quando há a necessidade de desviar ou direcionar o tráfego para destinos específicos após a entrada do pacote na VCN de destino. Caso contrário, não é necessário associar nenhuma tabela, pois o próprio LPG já realiza automaticamente a divulgação das redes das VCNs conectadas.</p>
+<h2 id="fluxo-de-roteamento">Fluxo de Roteamento</h2>
+<p>Observe o diagrama abaixo, que ilustra o fluxo de roteamento entre os recursos de rede da topologia de exemplo:</p>
+<p><img src="/oci/network/hub-spoke-com-local-peering-gateway-lpg/img/oci-lpg-routing-1.png" alt="LPG #2"></p>
+<p>Suponha que a compute instance <code>vm-a</code> (<code>10.100.20.5</code>) precise se comunicar com a compute instance <code>vm-b</code> (<code>192.168.200.160</code>). As decisões de roteamento da origem para o destino, que fazem o tráfego passar pelo compute instance <code>firewall</code> (<code>192.168.200.160</code>), são:</p>
+<ol>
+<li>
+<p>A primeira decisão de roteamento ocorre no próprio host <code>10.100.20.5</code>. Nessa etapa o host determina o endereço IP e a interface de rede que será usada para enviar o tráfego. Normalmente existe uma <strong>rota default</strong> apontando para o gateway da sub‑rede (<code>10.100.20.1</code>).</p>
+</li>
+<li>
+<p>Após o gateway da sub-rede (<code>10.100.20.1</code>) decidir que o pacote deve ser encaminhado ao DRG, a segunda decisão de roteamento ocorre quando o pacote entra no <code>drg-1</code>. Nesse momento, o DRG consulta a tabela de rotas <code>drg-rt_vcn</code>. Essa tabela possui um <strong>Import Route Distribution</strong> que instala todas as rotas divulgadas pelo <strong>Remote Peering Connection</strong>.</p>
+</li>
+<li>
+<p>A terceira decisão de roteamento ocorre quando o pacote está prestes a entrar no <code>drg-2</code>, onde a tabela <code>drg-rt_rpc</code> é consultada. Essa tabela possui um <strong>Import Route Distribution</strong> que instala todas as rotas de todas as redes conectadas ao <code>drg-2</code> (<strong>MATCH ALL</strong>).</p>
+</li>
+<li>
+<p>A quarta decisão de roteamento ocorre quando o pacote entra na <code>vcn-hub</code>, onde a tabela de rotas <code>rt_vcn-hub</code> passa a ser consultada. Nessa tabela existe uma <strong>rota default</strong> (<code>0.0.0.0/0</code>) que direciona todo o tráfego para o LPG <code>lpg_vcn-hub_vcn-firewall</code>, no qual conecta as VCNs <code>vcn-hub</code> à <code>vcn-firewall</code>. Entretanto, essa <strong>rota default</strong> não possui efeito para comunicações destinadas à própria <code>vcn-hub</code> (<code>192.168.100.0/24</code>). Isso significa que, caso o destino da <code>vm-a</code> for <code>vm-hub</code>, não é necessário que a tabela <code>rt_vcn-hub</code> contenha uma rota explícita para a rede <code>192.168.100.0/24</code> (há um roteamento implícito neste caso).</p>
+</li>
+<li>
+<p>A quinta decisão de roteamento ocorre quando o pacote entra na <code>vcn-firewall</code> através do <strong>Local Peering Gateway</strong>. Nesse momento, a tabela de rotas <code>rt-lpg_vcn-firewall_vcn-hub</code> é consultada onde existe uma <strong>rota default</strong> (<code>0.0.0.0/0</code>) que direciona todo o tráfego para o endereço IP do <code>firewall</code> (<code>192.168.200.160</code>).</p>
+</li>
+<li>
+<p>A compute instance <code>firewall</code> realiza a inspeção do tráfego e, caso a comunicação seja permitida, encaminha o pacote para o gateway da sua sub-rede (<code>192.168.200.129</code>). A tabela de rotas do host <code>firewall</code> é simples, contendo apenas uma <strong>rota default</strong> apontando para o respectivo gateway da sub-rede.</p>
+</li>
+<li>
+<p>A sétima decisão de roteamento ocorre no gateway da sub-rede <code>192.168.200.129</code>. Nesse momento, a tabela de rotas associada à sub-rede é consultada. Essa tabela deve conter rotas específicas para as redes internas do OCI, pois existe uma <strong>rota default</strong> que direciona o tráfego para o <strong>NAT Gateway</strong> (tráfego destinado à Internet). Isso significa que todas as redes do OCI para as quais o <code>firewall</code> precise acessar devem estar explicitamente definidas nessa tabela caso contrário, o tráfego será encaminhado ao <strong>NAT Gateway</strong>.</p>
+</li>
+<li>
+<p>A oitava decisão de roteamento ocorre quando o tráfego está prestes a entrar na <code>vcn-b</code> através do <strong>Local Peering Gateway</strong>, onde a tabela de rotas <code>rt-lpg_vcn-b_vcn-firewall</code> é consultada. Essa tabela não possui nenhuma rota definida e, neste caso, o próprio <strong>Local Peering Gateway</strong> realiza automaticamente a divulgação das redes das VCNs conectadas, não sendo necessário definir qualquer regra de roteamento.</p>
+</li>
+<li>
+<p>Por fim, o pacote entra na compute instance <code>vm-b</code> onde é processado pela aplicação de destino. Após o processamento, o tráfego de resposta é encaminhado ao gateway da sua respectiva sub-rede (<code>10.200.20.1</code>) para iniciar o caminho de retorno até a origem.</p>
+</li>
+</ol>
+<p>O tráfego de retorno, ou seja, a resposta da compute instance <code>vm-b</code> (<code>10.200.20.15</code>) para <code>vm-a</code> (<code>10.100.20.5</code>), segue o mesmo fluxo de decisões de roteamento descrito anteriormente, em sentido inverso.</p>
+<h2 id="comandos-de-exemplo">Comandos de Exemplo</h2>
+<p>No diretório <a href="https://github.com/daniel-armbrust/oci-network-basics/tree/main/scripts/hub-spoke-com-local-peering-gateway" target="_blank"><code>scripts/hub-spoke-com-local-peering-gateway/</code></a> há um conjunto de scripts para criar a topologia apresentada através do OCI CLI.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -1F
+</span></span><span style="display:flex;"><span>create/
+</span></span><span style="display:flex;"><span>data.env
+</span></span><span style="display:flex;"><span>destroy/
+</span></span></code></pre></div><p>O arquivo <code>data.env</code> define variáveis globais usadas pelos scripts. Elas specificam nomes dos recursos, endereços IP, regras de roteamento, IDs das imagens Linux, tipo de shape e quantidades de OCPU e memória para as compute instances.</p>
+<p>Antes de executar os scripts, crie e exporte as seguintes variáveis de ambiente:</p>
+<ul>
+<li>
+<p><strong>COMPARTMENT_ID</strong></p>
+<ul>
+<li>ID do compartment onde os recursos serão criados no seu tenancy.</li>
+</ul>
+</li>
+<li>
+<p><strong>SSH_PUB_KEY_PATH</strong></p>
+<ul>
+<li>Caminho para a chave pública SSH que será usada pelas três compute instances (<code>vm-a</code>, <code>vm-b</code> e <code>firewall</code>).</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ export COMPARTMENT_ID<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span>
+</span></span><span style="display:flex;"><span>$ export SSH_PUB_KEY_PATH<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;/caminho/chave-publica-ssh.key&#34;</span>
+</span></span></code></pre></div><p>Para criar os recursos, execute o script <code>create.sh</code> a partir do diretório <code>create/</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cd create/
+</span></span><span style="display:flex;"><span>$ ./create.sh
+</span></span></code></pre></div><p>Para excluir os recursos, execute o script <code>destroy.sh</code> a partir do diretório <code>destroy/</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cd destroy/
+</span></span><span style="display:flex;"><span>$ ./destroy.sh
+</span></span></code></pre></div><h2 id="armfirewall">ArmFirewall</h2>
+<p>O processo de criação da compute instance <code>firewall</code> (<code>192.168.200.160</code>) já realiza automaticamente a instalação do <a href="https://github.com/daniel-armbrust/armfirewall-proj">ArmFirewall</a>, uma aplicação web desenvolvida para gerenciar funcionalidades de roteamento e firewall em ambientes Linux.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cat create/cloud-init/cloud-init/firewall.sh
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#!/bin/bash</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/usr/bin/dnf install -y git jq
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Retorna a interface primária</span>
+</span></span><span style="display:flex;"><span>mac<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>curl -s -H <span style="color:#e6db74">&#39;Authorization: Bearer Oracle&#39;</span> http://169.254.169.254/opc/v2/vnics/ | jq -r <span style="color:#e6db74">&#39;.[0].macAddr&#39;</span> | tr <span style="color:#e6db74">&#39;[:upper:]&#39;</span> <span style="color:#e6db74">&#39;[:lower:]&#39;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>primary_iface<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span><span style="color:#f92672">[</span> -n <span style="color:#e6db74">&#34;</span>$mac<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> ip -o link show | awk -v mac<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$mac<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#39;tolower($0) ~ mac {gsub(&#34;:&#34;, &#34;&#34;, $2); print $2; exit}&#39;</span><span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># ArmFirewall deployment</span>
+</span></span><span style="display:flex;"><span>cd /opt <span style="color:#f92672">&amp;&amp;</span> git clone https://github.com/daniel-armbrust/armfirewall-proj.git <span style="color:#f92672">&amp;&amp;</span> cd armfirewall-proj/bin
+</span></span><span style="display:flex;"><span>./install.sh --lan-iface $primary_iface --wan-iface $primary_iface --router-mode
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exit <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p>Após a instalação, a console web pode ser acessada através do endereço <code>https://192.168.200.160:8000</code> utilizando o usuário <code>admin</code> e a senha inicial <code>admin</code>.</p>
+<p>Vale lembrar que todas as sub-redes desta topologia de exemplo são privadas, o que impede o acesso direto a partir da Internet à console web do <a href="https://github.com/daniel-armbrust/armfirewall-proj">ArmFirewall</a>. Neste caso, o acesso pode ser realizado utilizando o recurso <a href="https://docs.oracle.com/en-us/iaas/Content/Bastion/Concepts/bastionoverview.htm">OCI Bastion</a>.</p>
+
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Firewall on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/firewall/</link>
+    <description>Recent content in Firewall on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Wed, 22 Oct 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/firewall/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Roteamento via Firewall Central (hub &amp; spoke)</title>
+      <link>http://localhost:1313/oci/network/roteamento-via-firewall-central-hub-spoke/</link>
+      <pubDate>Wed, 22 Oct 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/roteamento-via-firewall-central-hub-spoke/</guid>
+      <description>&lt;h2 id=&#34;topologia-hub--spoke&#34;&gt;Topologia Hub &amp;amp; Spoke&lt;/h2&gt;&#xA;&lt;p&gt;A topologia do tipo &lt;strong&gt;Hub &amp;amp; Spoke&lt;/strong&gt; é muito utilizada em ambientes corporativos, nos quais há, geralmente, a necessidade de um firewall mais sofisticado (VCN Hub), capaz de oferecer maior controle e proteção sobre o tráfego entre aplicações (VCNs Spoke), sejam entre VCNs ou no fluxo de dados entre o ambiente on-premises e o OCI.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Firewall e Conntrack Table</title>
+      <link>http://localhost:1313/oci/network/firewall-e-conntrack-table/</link>
+      <pubDate>Sun, 10 Aug 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/firewall-e-conntrack-table/</guid>
+      <description>&lt;h2 id=&#34;security-list-vs-network-security-group&#34;&gt;Security List vs. Network Security Group&lt;/h2&gt;&#xA;&lt;p&gt;O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e 4 do modelo OSI, para controle de tráfego de entrada (ingress) e saída (egress). O funcionamento de ambos é idêntico: todo tráfego é bloqueado por padrão até que encontre uma regra que permita sua passagem (ALLOW). São eles:&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

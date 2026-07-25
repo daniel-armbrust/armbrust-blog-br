@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>VCN on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/vcn/</link>
+    <description>Recent content in VCN on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Sat, 03 Jan 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/vcn/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>OCI &#43; Linux Policy Routing</title>
+      <link>http://localhost:1313/oci/network/oci-linux-policy-routing/</link>
+      <pubDate>Sat, 03 Jan 2026 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/oci-linux-policy-routing/</guid>
+      <description>&lt;h2 id=&#34;roteamento-por-destino&#34;&gt;Roteamento por Destino&lt;/h2&gt;&#xA;&lt;p&gt;Por padrão, um roteador toma decisões de roteamento lendo o campo &lt;strong&gt;Destination Address&lt;/strong&gt; do cabeçalho IP (e em teoria, mas não na prática, no campo TOS). Após obter o endereço IP presente no &lt;strong&gt;Destination Address&lt;/strong&gt;, o próximo passo é consultar a tabela de rotas (&lt;strong&gt;route table&lt;/strong&gt;), para determinar qual será a &lt;strong&gt;interface de rede de saída&lt;/strong&gt; que será usada para &lt;strong&gt;encaminhar o pacote&lt;/strong&gt;. Em outras palavras, a decisão de roteamento é baseada exclusivamente no &lt;strong&gt;endereço de destino&lt;/strong&gt;, processo que também é chamado de &lt;strong&gt;Roteamento por Destino (destination-based routing)&lt;/strong&gt;.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>DNS Privado e Híbrido</title>
+      <link>http://localhost:1313/oci/network/dns-privado-e-hibrido/</link>
+      <pubDate>Thu, 18 Dec 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/dns-privado-e-hibrido/</guid>
+      <description>&lt;h2 id=&#34;introdução&#34;&gt;Introdução&lt;/h2&gt;&#xA;&lt;p&gt;Podemos dizer de forma bem resumida que o DNS ou Sistema de Nomes de Domínio, é um tipo de banco de dados distribuído e especializado em resolver nomes de domínios em endereços IP numéricos e vice-versa.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Network Visualizer</title>
+      <link>http://localhost:1313/oci/network/network-visualizer/</link>
+      <pubDate>Mon, 15 Dec 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/network-visualizer/</guid>
+      <description>&lt;h2 id=&#34;introdução&#34;&gt;Introdução&lt;/h2&gt;&#xA;&lt;p&gt;O &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm&#34;&gt;Network Visualizer&lt;/a&gt; é uma ferramenta do OCI útil para visualizar a topologia de rede criada em uma região. Acesse-a pelo menu &lt;strong&gt;Network&lt;/strong&gt; &amp;gt; &lt;strong&gt;Network Command Center&lt;/strong&gt;.&lt;/p&gt;&#xA;&lt;p&gt;&lt;img src=&#34;http://localhost:1313/oci/network/network-visualizer/img/network-visualizer-1.png&#34; alt=&#34;Network Viualizer #1&#34;&gt;&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Hub &amp; Spoke com Local Peering Gateway (LPG)</title>
+      <link>http://localhost:1313/oci/network/hub-spoke-com-local-peering-gateway-lpg/</link>
+      <pubDate>Mon, 03 Nov 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/hub-spoke-com-local-peering-gateway-lpg/</guid>
+      <description>&lt;h2 id=&#34;local-peering-gateway-lpg&#34;&gt;Local Peering Gateway (LPG)&lt;/h2&gt;&#xA;&lt;p&gt;O &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/localVCNpeering.htm&#34;&gt;Local Peering Gateway (LPG)&lt;/a&gt; é utilizado para conectar duas VCNs diretamente.&lt;/p&gt;&#xA;&lt;p&gt;Hoje, já não é mais recomendado utilizar LPGs para conectar VCNs pois, a função que o LPG desempenha foi substituída pelo &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDRGs.htm&#34;&gt;DRG&lt;/a&gt;, que é o modo atualmente recomendado para se construír topologias de redes no OCI.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Roteamento via Firewall Central (hub &amp; spoke)</title>
+      <link>http://localhost:1313/oci/network/roteamento-via-firewall-central-hub-spoke/</link>
+      <pubDate>Wed, 22 Oct 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/roteamento-via-firewall-central-hub-spoke/</guid>
+      <description>&lt;h2 id=&#34;topologia-hub--spoke&#34;&gt;Topologia Hub &amp;amp; Spoke&lt;/h2&gt;&#xA;&lt;p&gt;A topologia do tipo &lt;strong&gt;Hub &amp;amp; Spoke&lt;/strong&gt; é muito utilizada em ambientes corporativos, nos quais há, geralmente, a necessidade de um firewall mais sofisticado (VCN Hub), capaz de oferecer maior controle e proteção sobre o tráfego entre aplicações (VCNs Spoke), sejam entre VCNs ou no fluxo de dados entre o ambiente on-premises e o OCI.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Funcionamento do Roteamento no DRG</title>
+      <link>http://localhost:1313/oci/network/funcionamento-do-roteamento-no-drg/</link>
+      <pubDate>Tue, 12 Aug 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/funcionamento-do-roteamento-no-drg/</guid>
+      <description>&lt;h2 id=&#34;drg-dynamic-routing-gateway&#34;&gt;DRG (Dynamic Routing Gateway)&lt;/h2&gt;&#xA;&lt;p&gt;O &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDRGs.htm&#34;&gt;DRG (Dynamic Routing Gateway)&lt;/a&gt; é um componente responsável por possibilitar a conectividade e realizar o roteamento entre VCNs, seja na mesma região ou entre regiões diferentes. Além disso, ele permite a conectividade privada com ambientes on-premises, por meio do FastConnect ou do serviço de VPN Site-to-Site.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Firewall e Conntrack Table</title>
+      <link>http://localhost:1313/oci/network/firewall-e-conntrack-table/</link>
+      <pubDate>Sun, 10 Aug 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/firewall-e-conntrack-table/</guid>
+      <description>&lt;h2 id=&#34;security-list-vs-network-security-group&#34;&gt;Security List vs. Network Security Group&lt;/h2&gt;&#xA;&lt;p&gt;O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e 4 do modelo OSI, para controle de tráfego de entrada (ingress) e saída (egress). O funcionamento de ambos é idêntico: todo tráfego é bloqueado por padrão até que encontre uma regra que permita sua passagem (ALLOW). São eles:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Nota sobre VNICs</title>
+      <link>http://localhost:1313/oci/network/nota-sobre-vnics/</link>
+      <pubDate>Mon, 28 Jul 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/nota-sobre-vnics/</guid>
+      <description>&lt;h2 id=&#34;alguns-detalhes&#34;&gt;Alguns Detalhes&lt;/h2&gt;&#xA;&lt;p&gt;VNIC (Virtual Network Interface Card), nada mais é do que uma interface de rede lógica associada a uma interface de rede (NIC). Uma VNIC reside em uma sub-rede e é responsável por permitir que uma instância computacional se comunique com a rede. Ou seja, todo recurso computacional que possui conectividade de rede está possui pelo menos uma VNIC.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>VCN e Roteamento de Subrede</title>
+      <link>http://localhost:1313/oci/network/vcn-e-roteamento-de-subrede/</link>
+      <pubDate>Sat, 12 Jul 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/vcn-e-roteamento-de-subrede/</guid>
+      <description>&lt;h2 id=&#34;vcn-virtual-cloud-network&#34;&gt;VCN (Virtual Cloud Network)&lt;/h2&gt;&#xA;&lt;p&gt;Uma das primeiras atividades ao iniciar os trabalhos com o OCI é configurar corretamente uma &lt;strong&gt;VCN (Virtual Cloud Network)&lt;/strong&gt; e seus componentes de rede. Pode-se afirmar que uma VCN é uma rede maior que pode ser subdividida em partes menores, chamadas de sub-redes (subnets).&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,264 @@
+/* ===========================
+   Fontes
+   =========================== */
+
+@font-face {
+    font-family: "Inter";
+    src: url("/fonts/Inter-Regular.woff2") format("woff2");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+    font-display: swap;
+}
+
+/* ===========================
+   Layout
+   =========================== */
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 18px;
+    line-height: 1.75;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body > footer {
+    margin-top: auto;
+}
+
+main,
+article {
+    max-width: 820px;
+}
+
+/* ===========================
+   Títulos
+   =========================== */
+
+h1 {
+    font-size: 2.2rem;
+    margin-top: 1.5rem;
+}
+
+h2 {
+    margin-top: 2rem;
+}
+
+h3 {
+    margin-top: 1.5rem;
+}
+
+/* ===========================
+   Links
+   =========================== */
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ===========================
+   Código inline
+   =========================== */
+
+code {
+    font-family:
+        "JetBrains Mono",
+        "Cascadia Code",
+        "Fira Code",
+        Consolas,
+        monospace;
+
+    font-size: .90em;
+
+    background: #f5f5f5;
+
+    border: 1px solid #e3e3e3;
+
+    border-radius: 4px;
+
+    padding: .15em .35em;
+}
+
+/* ===========================
+   Blocos de código
+   =========================== */
+
+pre {
+    background: #f8f8f8;
+
+    border: 1px solid #ddd;
+
+    border-radius: 8px;
+
+    padding: 1rem;
+
+    overflow-x: auto;
+
+    margin: 1.5rem 0;
+}
+
+pre code {
+
+    background: transparent;
+
+    border: 0;
+
+    padding: 0;
+
+    font-size: .90rem;
+
+    font-family:
+        "JetBrains Mono",
+        monospace;
+}
+
+/* ===========================
+   Imagens
+   =========================== */
+
+img {
+    display: block;
+
+    max-width: 100%;
+
+    height: auto;
+
+    margin: 2rem auto;
+
+    border-radius: 6px;
+}
+
+/* ===========================
+   Legendas
+   =========================== */
+
+figcaption {
+
+    text-align: center;
+
+    font-size: .9rem;
+
+    color: #666;
+
+    margin-top: -.8rem;
+
+    margin-bottom: 2rem;
+}
+
+/* ===========================
+   Tabelas
+   =========================== */
+
+table {
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: .5rem .8rem;
+}
+
+/* ===========================
+   Rodapé
+   =========================== */
+
+.site-footer {
+
+    text-align: center;
+
+    color: #666;
+
+    font-size: .9rem;
+
+    margin: 2rem 0;
+}
+
+.site-footer p {
+    margin: .5rem 0;
+}
+
+.site-footer a {
+    color: inherit;
+}
+
+/* ===========================
+   Redes Sociais
+   =========================== */
+
+.social-links {
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: .8rem;
+}
+
+.social-link {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 18px;
+
+    height: 18px;
+}
+
+.social-link svg {
+
+    width: 18px;
+
+    height: 18px;
+
+    fill: currentColor;
+
+    opacity: .8;
+
+    transition: .2s;
+}
+
+.social-link:hover svg {
+    opacity: 1;
+}
+
+/* ===========================
+   Blockquote
+   =========================== */
+
+blockquote {
+
+    border-left: 4px solid #ccc;
+
+    padding-left: 1rem;
+
+    color: #555;
+
+    font-style: italic;
+}
+
+/* ===========================
+   Seleção de texto
+   =========================== */
+
+::selection {
+    background: #d9ecff;
+}

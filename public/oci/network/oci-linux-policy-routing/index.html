@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OCI &#43; Linux Policy Routing | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">OCI + Linux Policy Routing</span></h1>
+
+<h2 class="date">2026/01/03</h2>
+</div>
+
+<main>
+<h2 id="roteamento-por-destino">Roteamento por Destino</h2>
+<p>Por padrão, um roteador toma decisões de roteamento lendo o campo <strong>Destination Address</strong> do cabeçalho IP (e em teoria, mas não na prática, no campo TOS). Após obter o endereço IP presente no <strong>Destination Address</strong>, o próximo passo é consultar a tabela de rotas (<strong>route table</strong>), para determinar qual será a <strong>interface de rede de saída</strong> que será usada para <strong>encaminhar o pacote</strong>. Em outras palavras, a decisão de roteamento é baseada exclusivamente no <strong>endereço de destino</strong>, processo que também é chamado de <strong>Roteamento por Destino (destination-based routing)</strong>.</p>
+<p>Para facilitar, imagine que duas instâncias queiram se comunicar, cada uma em redes diferentes, e que exista um roteador Linux no meio interligando essas redes.</p>
+<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-rtb-1.png" alt="OCI Linux RT #1"></p>
+<p>O fluxo de dados ocorre da seguinte maneira:</p>
+<ol>
+<li>
+<p>O <strong>Compute Instance A (10.70.10.30)</strong> - <strong>origem</strong> - quer comunicar-se com o <strong>Compute Instance B (10.90.20.80)</strong> - <strong>destino</strong>. Para isso, ele gera um pacote IP cujo cabeçalho contém os campos <strong>Source Address</strong> e <strong>Destination Address</strong> preenchidos com os respectivos endereços IP de origem e destino.</p>
+</li>
+<li>
+<p><strong>Compute Instance A (10.70.10.30)</strong> não sabe alcançar nenhum host da rede <strong>10.90.20.0/24</strong>, mas conhece o roteador pois, ambos estão na mesma rede <strong>10.70.10.0/24</strong> (diretamente conectados). Assim, o pacote é enviado ao roteador Linux <strong>10.70.10.1</strong>.</p>
+</li>
+<li>
+<p>Após o pacote entrar pela interface de rede do roteador (<strong>eth0</strong>), inicia-se a <strong>decisão de roteamento</strong> que, basicamente, ocorre através da inspeção do campo <strong>Destination Address</strong> para determinar se o pacote deve ser entregue a um <strong>processo local</strong> (um daemon do próprio roteador) ou encaminhado para fora por outra interface de rede.</p>
+</li>
+<li>
+<p>Neste caso, o roteador determina que o pacote deve ser encaminhado para fora porque o endereço IP <strong>10.90.20.80</strong> contido no campo <strong>Destination Address</strong> pertence a outro host e não a ele mesmo. Em seguida, é consultada a tabela de rotas para descobrir qual interface deve ser usada para enviar o pacote. Essa decisão é feita por um cálculo que compara o <strong>Destination Address</strong> com os prefixos da tabela de rotas (aplicando as máscaras) e seleciona a rota mais específica (<strong>longest-prefix match</strong>).</p>
+</li>
+<li>
+<p>O pacote sai então pela interface de rede selecionada no processo de roteamento (<strong>eth1</strong>) para então poder alcançar o <strong>Compute Instance B (10.90.20.80)</strong>.</p>
+</li>
+</ol>
+<p>Roteamento por destino não ocorre apenas em roteadores mas sim, em qualquer host da internet no qual utiliza TCP/IP para se comunicar. Todo host, antes de se comunicar com a rede, precisa consultar a sua própria tabela de rotas para determinar a interface de saída a ser usada, aplicando o mesmo princípio de comparação de prefixos (longest‑prefix match) ao campo <strong>Destination Address</strong>.</p>
+<p>Um roteador difere de um host comum pela função de <strong>encaminhar pacotes (forward)</strong>. Ele recebe pacotes em uma interface e os encaminha para outra interface distinta.</p>
+<p>Para ativar a função de encaminhamento no Linux, tornar o host um roteador, basta habilitar o parâmetro do kernel <code>ip_forward</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ echo <span style="color:#ae81ff">1</span> &gt; /proc/sys/net/ipv4/ip_forward
+</span></span></code></pre></div><p>Se o roteador também encaminha pacotes IPv6, o parâmetro do kernel é outro:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ echo <span style="color:#ae81ff">1</span> &gt; /proc/sys/net/ipv6/conf/all/forwarding
+</span></span></code></pre></div><h2 id="policy-routing">Policy Routing</h2>
+<p><strong>Policy Routing (ou Policy-Based Routing - PBR)</strong> é uma técnica de roteamento em que a decisão de roteamento pode ser feita a partir de outros critérios além do endereço de destino.</p>
+<p>Muitas vezes, o <strong>Policy Routing</strong> é chamado de <strong>roteamento inteligente</strong> pois permite tomar decisões de roteamento com base não apenas no endereço de destino, mas também em outras propriedades dos pacotes, como endereço de origem, portas TCP/UDP, marcações em pacotes, campo TOS (Type of Service), interface de entrada, dados do pacote (payload), entre outros.</p>
+<p>Normalmente, a configuração de <strong>Policy Routing</strong> divide‑se em duas etapas:</p>
+<ol>
+<li>Criar várias tabelas de rotas.</li>
+<li>Definir regras (policy rules) que escolhem, para cada pacote, qual tabela utilizar.</li>
+</ol>
+<h3 id="múltiplas-tabelas-de-rotas">Múltiplas Tabelas de Rotas</h3>
+<p>A funcionalidade de <strong>Policy Routing</strong>, presente no Linux desde o Kernel 2.2, permite criar e configurar múltiplas tabelas de rotas. Ao contrário do roteamento tradicional, que usa apenas uma tabela de rotas, o <strong>Policy Routing</strong> possibilita ter várias tabelas de roteamento independentes, cada uma contendo as suas próprias regras de roteamento (rotas).</p>
+<p>Por padrão, o Linux vem configurado com <strong>quatro tabelas de rotas</strong> definidas no arquivo <code>/etc/iproute2/rt_tables</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ cat /etc/iproute2/rt_tables
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># reserved values</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>       local
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">32766</span>   main
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">32767</span>   default
+</span></span></code></pre></div><p>As tabelas são identificadas internamente pelo Kernel por IDs numéricos e, opcionalmente podem ser referenciadas por um respectivo nome. Para que um nome seja associado a um ID é preciso declará‑lo no arquivo <code>/etc/iproute2/rt_tables</code> pois, o Kernel lê esse arquivo na sua inicialização para reconhecer as tabelas nomeadas.</p>
+<ul>
+<li>
+<p><strong>local (0)</strong></p>
+<ul>
+<li>A tabela local contém rotas para endereços locais do sistema (local delivery), incluindo endereços broadcast, multicast e loopback.</li>
+<li>Tem prioridade alta na decisão de roteamento onde, o Kernel consulta para determinar se um pacote é destinado ao próprio host.</li>
+</ul>
+</li>
+<li>
+<p><strong>main (32766)</strong></p>
+<ul>
+<li>É a tabela de roteamento padrão usada pelo Linux no qual contém todas as rotas que não estão relacionadas com <strong>Policy Routing</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>default (32767)</strong></p>
+<ul>
+<li>Tabela reservada para processametno posterior quando não houver nenhuma combinação de regra presente na tabela <strong>main</strong>.</li>
+</ul>
+</li>
+</ul>
+<p>Em relação às tabelas pré‑configuradas, a tabela <strong>main</strong>, é, na prática, a única que se manipula manualmente quando não se utiliza <strong>Policy Routing</strong>, as demais devem ser deixadas para o Kernel gerenciar.</p>
+<p>Para visualizar o conteúdo de uma tabela é possível usar seu nome ou ID numérico:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route show table main
+</span></span><span style="display:flex;"><span>default via 10.90.20.254 dev eth1 proto kernel
+</span></span><span style="display:flex;"><span>10.70.10.0/24 dev eth0 proto kernel scope link src 10.70.10.1
+</span></span><span style="display:flex;"><span>10.90.20.0/24 dev eth1 proto kernel scope link src 10.90.20.1
+</span></span></code></pre></div><p>O comando <code>ip route show table main</code> é equivalente ao comando <code>route -n</code>, apenas com formato de saída diferente:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ route -n
+</span></span><span style="display:flex;"><span>Kernel IP routing table
+</span></span><span style="display:flex;"><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style="display:flex;"><span>0.0.0.0         10.90.20.254    0.0.0.0         UG    <span style="color:#ae81ff">0</span>      <span style="color:#ae81ff">0</span>        <span style="color:#ae81ff">0</span> eth1
+</span></span><span style="display:flex;"><span>10.70.10.0      0.0.0.0         255.255.255.0   U     <span style="color:#ae81ff">0</span>      <span style="color:#ae81ff">0</span>        <span style="color:#ae81ff">0</span> eth0
+</span></span><span style="display:flex;"><span>10.90.20.0      0.0.0.0         255.255.255.0   U     <span style="color:#ae81ff">0</span>      <span style="color:#ae81ff">0</span>        <span style="color:#ae81ff">0</span> eth1
+</span></span></code></pre></div><p>Para criar uma nova tabela, primeiro adicione seu ID e nome em <code>/etc/iproute2/rt_tables</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ echo <span style="color:#e6db74">&#39;100 internet&#39;</span> &gt;&gt; /etc/iproute2/rt_tables
+</span></span></code></pre></div><p>Após isso, já se torna possível adicionar e manipular rotas nesta tabela:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route add 198.51.100.0/24 dev eth0 table internet
+</span></span></code></pre></div><h3 id="ip-rule">ip rule</h3>
+<p>Além das tabelas, existe um conjunto de regras avaliadas antes da decisão de roteamento (isso faz parte do funcionamento padrão do Linux, independentemente do uso explícito de Policy Routing). Essas regras são manipuladas com o comando <code>ip rule</code> e, com base em critérios que você especifica, instruem o kernel sobre qual tabela de rotas deve ser consultada para efetuar a decisão de roteamento. Em resumo, as regras do <code>ip rule</code> são avaliadas antes das regras roteamento (tabela de rotas).</p>
+<p>Por exemplo, a regra abaixo direciona a consulta para a tabela <code>internet</code>, que será usada para determinar o next‑hop do pacote:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 8.8.8.8 table internet prio <span style="color:#ae81ff">10</span>
+</span></span></code></pre></div><p>Cada regra tem uma priordade de processamento (<code>prio 10</code>) onde, regras de maior prioridade (valor mais baixo) são avaliadas primeiro e seguem em ordem crescente até a última regra. Ao encontrar uma regra que dê match, sua ação é aplicada (por exemplo, consultar a tabela &ldquo;internet&rdquo;) e as regras subsequentes não são avaliadas.</p>
+<p>Por padrão, há as seguintes regras que fazem uso das tabelas <code>local</code>, <code>main</code> e <code>default</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule show
+</span></span><span style="display:flex;"><span>0:      from all lookup local
+</span></span><span style="display:flex;"><span>32766:  from all lookup main
+</span></span><span style="display:flex;"><span>32767:  from all lookup default
+</span></span></code></pre></div><p>Por exemplo, a tabela <code>local</code> tem maior prioridade e será avaliada por primeiro. Como já foi dito, ela contém ontém rotas para endereços locais do sistema. Isso significa que, todo pacote (<code>from all</code>) obrigatóriamente entra na tabela <code>local</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route show table local
+</span></span><span style="display:flex;"><span>local 10.70.10.20 dev enp0s6 proto kernel scope host src 10.70.10.20 
+</span></span><span style="display:flex;"><span>broadcast 10.70.10.255 dev enp0s6 proto kernel scope link src 10.70.10.20 
+</span></span><span style="display:flex;"><span>local 10.80.30.40 dev enp1s0 proto kernel scope host src 10.80.30.40 
+</span></span><span style="display:flex;"><span>broadcast 10.80.30.255 dev enp1s0 proto kernel scope link src 10.80.30.40 
+</span></span><span style="display:flex;"><span>local 10.90.20.60 dev enp2s0 proto kernel scope host src 10.90.20.60 
+</span></span><span style="display:flex;"><span>broadcast 10.90.20.255 dev enp2s0 proto kernel scope link src 10.90.20.60 
+</span></span><span style="display:flex;"><span>local 127.0.0.0/8 dev lo proto kernel scope host src 127.0.0.1 
+</span></span><span style="display:flex;"><span>local 127.0.0.1 dev lo proto kernel scope host src 127.0.0.1 
+</span></span><span style="display:flex;"><span>broadcast 127.255.255.255 dev lo proto kernel scope link src 127.0.0.1 
+</span></span></code></pre></div><h2 id="netfilter">Netfilter</h2>
+<p>Além do <code>ip rule</code> e <code>ip route</code>, existem outros estágios avaliados por regras que processam os pacotes. Em conjunto com o comando <code>ip</code>, entram também as regras do <em><a href="https://en.wikipedia.org/wiki/Netfilter">Netfilter</a></em>.</p>
+<p><em><a href="https://en.wikipedia.org/wiki/Netfilter">Netfilter</a></em> é um framework do Kernel Linux que contém vários estágios de processamento que são consultados assim que um pacote entra pela interface de rede.</p>
+<p>Os estágios do <em><a href="https://en.wikipedia.org/wiki/Netfilter">Netfilter</a></em> são divididos em dois componentes principais:</p>
+<h3 id="tabelas">tabelas</h3>
+<p>Existem três tabelas principais sendo que cada uma desempenha uma função específica:</p>
+<ul>
+<li>
+<p><strong>FILTER</strong></p>
+<ul>
+<li>Contém regras de filtragem de pacotes, usada para aceitar (ACCEPT), rejeitar (REJECT) ou descartar (DROP) tráfego.</li>
+</ul>
+</li>
+<li>
+<p><strong>NAT</strong></p>
+<ul>
+<li>Contém regras de tradução de endereços/portas (DNAT, SNAT, MASQUERADE).</li>
+</ul>
+</li>
+<li>
+<p><strong>MANGLE</strong></p>
+<ul>
+<li>Contém regras para alterações de cabeçalho e marcação de pacotes (p.ex. TOS/DSCP, TTL, marcação para routing/qos).</li>
+</ul>
+</li>
+</ul>
+<p>Para visualizar as regras de uma tabela específica, utilize o comando abaixo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t filter -L
+</span></span><span style="display:flex;"><span>Chain INPUT <span style="color:#f92672">(</span>policy ACCEPT<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>target     prot opt source               destination
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Chain FORWARD <span style="color:#f92672">(</span>policy ACCEPT<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>target     prot opt source               destination
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Chain OUTPUT <span style="color:#f92672">(</span>policy ACCEPT<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>target     prot opt source               destination
+</span></span></code></pre></div><h3 id="chains">chains</h3>
+<p>Dentro de cada tabela existem os estágios de processamento ou chains que são:</p>
+<ul>
+<li>
+<p><strong>INPUT</strong></p>
+<ul>
+<li>Tratar pacotes destinados ao próprio host (local delivery).</li>
+<li>Ex.: um pacote direcionado a um processo <code>nginx</code> passa por este estágio.</li>
+</ul>
+</li>
+<li>
+<p><strong>FORWARD</strong></p>
+<ul>
+<li>Processa pacotes que são encaminhados para fora do Linux, entram por uma interface e saem por outra.</li>
+</ul>
+</li>
+<li>
+<p><strong>OUTPUT</strong></p>
+<ul>
+<li>Processa pacotes gerados localmente pelo host antes de serem enviados à rede.</li>
+<li>Ex.: após atender uma requisição, o processo <code>nginx</code> gera um pacote de resposta que passa por essa chain antes de sair do host.</li>
+</ul>
+</li>
+<li>
+<p><strong>PREROUTING</strong></p>
+<ul>
+<li>Processa pacotes assim que chegam, antes da decisão de roteamento.</li>
+</ul>
+</li>
+<li>
+<p><strong>POSTROUTING</strong></p>
+<ul>
+<li>Processa pacotes após a decisão de roteamento.</li>
+</ul>
+</li>
+</ul>
+<p>Oficialmente, no contexto do Netfilter/iptables, o que eu chamo de <strong>&ldquo;estágio&rdquo;</strong> é chamado de <strong>chain</strong>, ou <strong>cadeia</strong> em português.</p>
+<p>O termo <strong>chain</strong> faz sentido porque representa uma <strong>cadeia de regras</strong>, ou seja, é um conjunto de regras processadas sequencialmente, uma após a outra, afim de encontrar uma correspondência aos critérios que forão definidos. Quando uma correspondência é encontrada (deu match), a ação associada é executada sobre o pacote de dados.</p>
+<p>Entretanto, nem todas as tabelas possuem as mesmas <strong>chain</strong> e, isso dependente da função que a tabela desempenha.</p>
+<p>Por exemplo, a tabela <strong>FILTER</strong> possui as chains <strong>INPUT</strong>, <strong>FORWARD</strong> e <strong>OUTPUT</strong>, pois sua função principal é filtrar pacotes que entram, saem ou são encaminhados para fora. Nesse caso, não faria sentido existir uma chain <strong>PREROUTING</strong> na tabela <strong>FILTER</strong>, pois essa etapa não tem relação com filtragem de pacotes.</p>
+<p>Para as demais tabelas, <strong>NAT</strong> possui os estágios <strong>PREROUTING</strong>, <strong>INPUT</strong>, <strong>OUTPUT</strong> e <strong>POSTROUTING</strong>. E a tabela <strong>MANGLE</strong> possui os estágios <strong>PREROUTING</strong>, <strong>INPUT</strong>, <strong>FORWARD</strong>, <strong>OUTPUT</strong> e <strong>POSTROUTING</strong>.</p>
+<p>O último detalhe está relacionado à <strong>policy padrão da chain</strong>, que define a ação aplicada quando nenhuma regra da cadeia corresponde aos critérios do pacote analisado.</p>
+<p>Essa policy pode representar ações como <strong>ACCEPT</strong>, <strong>REJECT</strong> ou <strong>DROP</strong>:</p>
+<ul>
+<li>
+<p><strong>ACCEPT</strong></p>
+<ul>
+<li>O pacote é aceito e o seu processamento continua.</li>
+</ul>
+</li>
+<li>
+<p><strong>REJECT</strong></p>
+<ul>
+<li>O pacote é rejeitado e uma resposta é enviada ao remetente (por padrão: ICMP ICMP Type 3, Code 3 / Destination Unreachable: Port Unreachable).</li>
+</ul>
+</li>
+<li>
+<p><strong>DROP</strong></p>
+<ul>
+<li>O pacote é descartado e nenhuma resposta é enviada ao rementente.</li>
+</ul>
+</li>
+</ul>
+<p>Por exemplo, para alterar a chain <strong>INPUT</strong> para <strong>DROP</strong> da tabela <strong>FILTER</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t filter -P INPUT DROP
+</span></span></code></pre></div><p>Para criar uma regra que permita a entrada de pacotes destinados a um processo local escutando na porta 80/TCP, utilize o comando abaixo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t filter -A INPUT -p tcp --dport <span style="color:#ae81ff">80</span> -j ACCEPT
+</span></span></code></pre></div><p>Com essa regra, todo pacote que entra no host e tem como destino a porta 80/TCP será aceito. Qualquer outro pacote que não corresponda a essa regra será descartado pela <strong>policy padrão DROP</strong> que foi definida.</p>
+<h2 id="fluxo-dos-pacotes-dentro-da-caixa">Fluxo dos Pacotes dentro da Caixa</h2>
+<p>Para entender melhor a relação entre os estágios de processamento apresentados, vamos utilizar o diagrama abaixo:</p>
+<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-pbr-1.png" alt="OCI Linux PBR #1"></p>
+<p>De acordo com o diagrama, a partir do momento em que o pacote entra pela interface de rede <strong>eth0</strong>, ele pode seguir dois caminhos possíveis. Para cada caminho, diferentes estágios de processamento são utilizados, conforme descrito abaixo:</p>
+<h3 id="entrega-local-local-delivery">Entrega Local (local delivery)</h3>
+<p>Pacotes destinados ao próprio host, para ser entregue a um processo local em execução, percorrem os seguintes estágios em ordem:</p>
+<h4 id="mangle--prerouting">mangle / PREROUTING</h4>
+<p>Este é o primeiro estágio percorrido pelo pacote assim que ele entra pela interface de rede, antes de qualquer decisão de roteamento ser aplicada.</p>
+<p>Nesta etapa, é possível &ldquo;marcar pacotes&rdquo;, ou seja, classificá-los para uso posterior em regras de roteamento, políticas de QoS ou controle de tráfego. Também é possível alterar campos específicos do cabeçalho IP, como TTL e TOS.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t mangle -A PREROUTING -i eth0 -p tcp --dport <span style="color:#ae81ff">80</span> -j MARK --set-mark <span style="color:#ae81ff">10</span>
+</span></span></code></pre></div><h4 id="nat--prerouting">nat / PREROUTING</h4>
+<p>Primeira etapa que é possível aplicar regras para tradução de endereços (NAT). Na prática, este estágio é muito utilizada para regras de <code>DNAT</code> e <code>REDIRECT</code> no qual possibilita redirecionar pacotes para outro endereço IP ou porta antes da decisão de roteamento.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t nat -A PREROUTING -i eth0 -p tcp --dport <span style="color:#ae81ff">80</span> -j REDIRECT --to-ports <span style="color:#ae81ff">8080</span>
+</span></span></code></pre></div><p>Lembre-se de que qualquer alteração realizada no pacote durante este estágio pode influenciar a decisão de roteamento que será tomada posteriormente.</p>
+<h4 id="rpdb--ip-rules">RPDB / ip rules</h4>
+<p>Esta é a primeira etapa relacionada ao <strong>Policy Routing</strong>, responsável por definir qual tabela de rotas será consultada com base em critérios que você específica.</p>
+<p>Por exemplo, é possível escolher uma tabela de rotas específica para pacotes previamente marcados em <code>mangle / PREROUTING</code> com <code>--set-mark 10</code> :</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add fwmark <span style="color:#ae81ff">10</span> table internet priority <span style="color:#ae81ff">100</span>
+</span></span></code></pre></div><h4 id="decisão-de-roteamento-de-entrada">Decisão de Roteamento de entrada</h4>
+<p>Esta é a primeira decisão de roteamento do fluxo. Com base nas regras de <strong>Policy Routing</strong>, o Kernel define qual tabela de rotas será consultada para determinar qual será o next-hop do pacote.</p>
+<p>Nesta etapa, com base nas regras de roteamento de uma tabela de rotas, será decidido se o pacote deve ser entregue para um processo local (<code>nginx</code>) ou, se ele deve ser encaminhado para fora do host (forward).</p>
+<p>Como mencionado anteriormente, caso nenhuma regra específica de <strong>Policy Routing</strong> seja aplicada, a tabela <code>main</code> será consultada por padrão.</p>
+<h4 id="mangle--input">mangle / INPUT</h4>
+<p>Segunda etapa da tabela <code>mangle</code>, onde também é possível &ldquo;marcar pacotes&rdquo;, de forma semelhante ao que foi apresentado anteriormente em <code>mangle / PREROUTING</code>.</p>
+<p>Um caso de uso prático para este estágio é contabilizar tráfego destinado a serviços locais.</p>
+<h4 id="nat--input">nat / INPUT</h4>
+<p>Segunda etapa da tabela <code>nat</code> aplicada após a decisão de roteamento. Aqui é possível redirecionar pacotes para outra porta que são destinados para ser entregues para um processo local (<code>nginx</code>).</p>
+<h4 id="filter--input">filter / INPUT</h4>
+<p>Esta é a principal etapa de filtragem para pacotes destinados ao próprio host. Nesta etapa, são aplicadas as regras de firewall responsáveis por permitir, rejeitar ou descartar o tráfego destinado a processos locais em execução.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t filter -A INPUT -p tcp --dport <span style="color:#ae81ff">80</span> -j DROP
+</span></span></code></pre></div><h4 id="processo-local">Processo Local</h4>
+<p>Processo local em execução que receberá o pacote após ele ser aceito pelas etapas anteriores. Nesse momento, o Kernel entrega o pacote ao processo correto com base nas informações de camada 4, como protocolo e porta de destino. Por exemplo, se houver um processo ````nginx``` &ldquo;escutando&rdquo; na porta 80/TCP, o Kernel usará essa informação para encaminhar o pacote ao socket associado a esse serviço.</p>
+<p>Depois que o processo local recebe o pacote e realiza o seu processamento, um novo pacote é gerado contendo a resposta que será enviada ao remetente.</p>
+<h4 id="rpdb--ip-rules-1">RPDB / ip rules</h4>
+<p>As mesmas regras de <strong>Policy Routing</strong> definidas com <code>ip rule</code>, apresentadas na etapa 3, também são avaliadas neste momento para determinar qual tabela de rotas será utilizada. Porém, agora o processamento ocorre sobre um novo pacote: a resposta gerada pelo processo local, como o <code>nginx</code>, que será enviada de volta ao remetente.</p>
+<h4 id="decisão-de-roteamento-de-saída">Decisão de Roteamento de saída</h4>
+<p>A partir da resposta gerada pelo processo local e da tabela de rotas selecionada pelas regras de <code>ip rule</code>, o Kernel realiza uma nova decisão de roteamento para determinar por qual interface de rede o pacote de resposta será enviado (interface de saída).</p>
+<h4 id="mangle--output">mangle / OUTPUT</h4>
+<p>Terceira etapa da tabela <code>mangle</code>, porém, esta etapa é processada somente para pacotes gerados localmente pelo próprio host, antes que eles sejam enviados pela interface de rede de saída.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t mangle -A OUTPUT -p tcp --sport <span style="color:#ae81ff">80</span> -j MARK --set-mark <span style="color:#ae81ff">20</span>
+</span></span></code></pre></div><h4 id="nat--output">nat / OUTPUT</h4>
+<p>Terceira etapa da tabela <code>nat</code>, usada para aplicar regras de tradução de endereços ou portas em pacotes gerados localmente pelo próprio host.</p>
+<h4 id="filter--output">filter / OUTPUT</h4>
+<p>Segunda etapa de filtragem de pacotes da tabela <code>filter</code>. Nesta etapa, podem ser criadas regras para permitir, rejeitar ou descartar tráfego. Porém, diferente da chain <code>filter / INPUT</code>, esta etapa é avaliada somente para pacotes gerados localmente pelo próprio host (resposta ou nova conexão de dentro para fora).</p>
+<p>Por exemplo, você pode impedir que um usuário de dentro do host, abra uma conexão telnet para fora:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t filter -A OUTPUT -p tcp --dport <span style="color:#ae81ff">23</span> -j REJECT
+</span></span></code></pre></div><h4 id="mangle--postrouting">mangle / POSTROUTING</h4>
+<p>Quarta e última etapa da tabela <code>mangle</code>. Ela é processada depois da decisão de roteamento (POSTROUTING), quando o Kernel já determinou a interface de rede de saída do pacote.</p>
+<p>Por exemplo, é nesta etapa que é possível alterar o campo TTL do pacote IP:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t mangle -A POSTROUTING -o eth1 -j TTL --ttl-set <span style="color:#ae81ff">128</span>
+</span></span></code></pre></div><h4 id="nat--postrouting">nat / POSTROUTING</h4>
+<p>Última etapa da tabela <code>nat</code>, processada após a decisão de roteamento (<code>POSTROUTING</code>) e pouco antes do pacote sair pela interface de rede.</p>
+<p>Nesta etapa, é muito comum o uso de regras do tipo <code>MASQUERADE</code>, utilizadas para alterar o endereço IP de origem dos pacotes quando eles saem por uma interface de rede. Esse recurso é bastante usado quando máquinas de uma rede interna precisam acessar a Internet utilizando o endereço IP da interface WAN do roteador ou firewall.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+</span></span></code></pre></div><h3 id="encaminhamento-forward">Encaminhamento (forward)</h3>
+<p>Pacotes que são encaminhados pelo host para outra rede, entrando por uma interface de rede e saindo por outra, quando o sistema desempenha o papel de roteador ou firewall.</p>
+<p>Como você verá, as etapas de processamento são diferentes. Neste fluxo, as chains <code>INPUT</code> e <code>OUTPUT</code> não são utilizadas, pois o pacote não é destinado ao próprio host nem foi gerado localmente por ele. Em vez disso, entra em cena a chain <code>FORWARD</code> , responsável por tratar pacotes que atravessam o host (entram por uma interface de rede e saem por outra).</p>
+<p>Habilitar a função de encaminhamento exige alterar um parâmetro do Kernel Linux:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ echo <span style="color:#ae81ff">1</span> &gt; /proc/sys/net/ipv4/ip_forward
+</span></span></code></pre></div><p>Ou, se o roteador também encaminha pacotes IPv6:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ echo <span style="color:#ae81ff">1</span> &gt; /proc/sys/net/ipv6/conf/all/forwarding
+</span></span></code></pre></div><p>As tabelas e chains <code>mangle / PREROUTING</code>, <code>nat / PREROUTING</code>, <code>mangle / POSTROUTING</code> e <code>nat / POSTROUTING</code> possuem as mesmas funções e são processadas na mesma ordem.</p>
+<p>A exceção está no processamento da RPDB / ip rules e na <strong>decisão de roteamento de entrada</strong>. Nesse ponto, o kernel identifica que o pacote não é destinado ao próprio host, mas sim a outra rede. Por isso, ele será encaminhado pelo host, utilizando uma interface de saída diferente daquela por onde entrou.</p>
+<h4 id="mangle--forward">mangle / FORWARD</h4>
+<p>Etapa da tabela <code>mangle</code> aplicada à chain <code>FORWARD</code>, utilizada para pacotes que serão encaminhados pelo host, ou seja, pacotes que entram por uma interface de rede e saem por outra.</p>
+<h4 id="filter--forward">filter / FORWARD</h4>
+<p>Chamo esta etapa de &ldquo;firewall do roteador&rdquo;. Aqui se aplicam regras de filtragem para os pacotes que atravessam o host. Isto quer dizer que quando você quer filtrar &ldquo;por dentro do firewall&rdquo;, você deve usar esta tabela e chain.</p>
+<p>Por exemplo, para descartar tráfego ICMP do tipo <code>echo-request</code> gerado pela rede interna e encaminhado para hosts na Internet, utilize a regra abaixo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ iptables -t filter -A FORWARD -i eth0 -o eth1 -p icmp --icmp-type echo-request -j DROP
+</span></span></code></pre></div><h2 id="oci--linux--policy-routing">OCI + Linux + Policy Routing</h2>
+<p>Toda essa base teórica sobre o fluxo de pacotes no Linux é essencial para implementar corretamente um firewall multi-VNIC ou multi-homed no OCI.</p>
+<p><strong>Policy Route</strong> aqui tem um único objetivo: definir qual gateway de sub-rede deve ser utilizado para cada fluxo de tráfego.</p>
+<p>Independentemente do fabricante do seu firewall, seja ele um pfSense, Fortinet, Palo Alto, Check Point, entre outros, a lógica geral do processamento de pacotes e decisão de roteamento dentro da caixa é similar.</p>
+<p>De acordo com a topologia de referência que está sendo estudada, o firewall Linux possui três VNICs, cada uma conectada a uma sub-rede distinta no OCI. Cada sub-rede possui seu próprio bloco CIDR e seu respectivo gateway, o que torna necessário compreender como o Linux toma decisões de roteamento quando há múltiplas interfaces de rede disponíveis.</p>
+<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-pbr-2.png" alt="OCI Linux PBR #2"></p>
+<h3 id="vnic-appl-enp0s6">vnic-appl (enp0s6)</h3>
+<p>Esta é primeira VNIC (primary) que é configurada no momento de criação da instância.</p>
+<p>As primeiras regras de <code>ip rule</code>, instruem o Kernel Linux a consultar a tabela de rotas <code>main</code> para qualquer comunicação com a rede <code>10.70.0.0/16</code> (VCN-FIREWALL-INTERNO):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 10.70.0.0/16 table main prio <span style="color:#ae81ff">20</span>
+</span></span><span style="display:flex;"><span>$ ip rule add from 10.70.0.0/16 table main prio <span style="color:#ae81ff">21</span>
+</span></span></code></pre></div><p>Além dessas configurações, essa VNIC também utiliza a tabela de rotas <code>main</code>, que é consultada para comunicação com as redes <code>10.50.0.0/16</code> (VCN-APPL-1), <code>10.60.0.0/16</code> (VCN-APPL-2) e <code>10.100.0.0/16</code> (VCN-DB).</p>
+<p>Quem conhece e sabe alcançar essas redes é o gateway da sub-rede <code>10.70.10.1</code>. Por isso, os pacotes que saem pela primary VNIC devem consultar a tabela de rotas <code>main</code>, onde existe uma rota padrão apontando para esse gateway.</p>
+<p>As regras de <code>ip rule</code> abaixo instruem o Kernel Linux a consultar a tabela de rotas <code>main</code> sempre que o endereço de destino pertencer a uma das seguintes redes: <code>10.50.0.0/16</code> (VCN-APPL-1), <code>10.60.0.0/16</code> (VCN-APPL-2) e <code>10.100.0.0/16</code> (VCN-DB).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 10.50.0.0/16 table main prio <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>$ ip rule add to 10.60.0.0/16 table main prio <span style="color:#ae81ff">101</span>
+</span></span><span style="display:flex;"><span>$ ip rule add to 10.100.0.0/16 table main prio <span style="color:#ae81ff">102</span>
+</span></span></code></pre></div><p>A interface primária será também utilizada para comunicação com a rede de destino <code>169.254.0.0/16</code>. Essa é uma rede link-local interna da OCI, utilizada por diversos serviços da plataforma, como DNS, NTP, metadata service e conexões iSCSI.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 169.254.0.0/16 table main prio <span style="color:#ae81ff">10</span>
+</span></span></code></pre></div><p>Na configuração deste firewall, essa regra possui a prioridade mais alta no processo de decisão de roteamento.</p>
+<h3 id="vnic-externo-enp1s0">vnic-externo (enp1s0)</h3>
+<p>Esta VNIC utiliza a tabela de rotas <code>externo</code> e é responsável pela comunicação com o ambiente on-premises, onde estão localizadas as redes <code>172.16.100.0/24</code>, <code>10.200.10.0/24</code> e <code>192.168.100.0/24</code>.</p>
+<p>Após definir o ID numérico e o nome da tabela <code>externo</code> no arquivo <code>/etc/iproute2/rt_tables</code>, devem ser configuradas as rotas:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route add 10.80.0.0/16 dev enp1s0 table externo
+</span></span><span style="display:flex;"><span>$ ip route add default via 10.80.30.1 table externo
+</span></span></code></pre></div><p>Para visualizar as rotas configuradas nessa tabela, utilize o comando abaixo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route show table externo
+</span></span><span style="display:flex;"><span>default via 10.80.30.1 dev enp1s0
+</span></span><span style="display:flex;"><span>10.80.0.0/16 dev enp1s0 scope link
+</span></span></code></pre></div><p>Após configurar a tabela de rotas, é necessário instruir o Kernel Linux a consultar a tabela <code>externo</code> sempre que a comunicação tiver origem ou destino para a rede <code>10.80.0.0/16</code> (VCN-FIREWALL-EXTERNO):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 10.80.0.0/16 table externo prio <span style="color:#ae81ff">30</span>
+</span></span><span style="display:flex;"><span>$ ip rule add from 10.80.0.0/16 table externo prio <span style="color:#ae81ff">31</span>
+</span></span></code></pre></div><p>Também é necessário consultar a mesma tabela sempre que o endereço de destino for uma das redes on-premises:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 172.16.100.0/24 table externo prio <span style="color:#ae81ff">200</span>
+</span></span><span style="display:flex;"><span>$ ip rule add to 10.200.10.0/24 table externo prio <span style="color:#ae81ff">201</span>
+</span></span><span style="display:flex;"><span>$ ip rule add to 192.168.100.0/24 table externo prio <span style="color:#ae81ff">202</span>
+</span></span></code></pre></div><p>Como existe uma rota default na tabela <code>externo</code> apontando para o gateway <code>10.80.30.1</code>, não é necessário cadastrar individualmente as redes on-premises nessa tabela.</p>
+<p>Todo tráfego direcionado ao ambiente on-premises será encaminhado para o gateway da sub-rede <code>10.80.30.1</code>. A partir daí, esse gateway saberá alcançar essas redes por meio do DRG.</p>
+<h3 id="vnic-internet-enp2s0">vnic-internet (enp2s0)</h3>
+<p>A VNIC <code>vnic-internet</code> é utilizada para toda comunicação com destino à Internet.</p>
+<p>Para que isso seja possível, além do endereço IP privado <code>10.90.20.60</code>, essa VNIC também possui um endereço IP público associado, gerenciado pela camada de rede do OCI.</p>
+<p>Isso significa que o IP público não aparece diretamente na interface de rede do Linux:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip addr show dev enp2s0
+</span></span><span style="display:flex;"><span>4: enp2s0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style="color:#ae81ff">1500</span> qdisc mq state UP group default qlen <span style="color:#ae81ff">1000</span>
+</span></span><span style="display:flex;"><span>    link/ether 02:00:17:06:63:9b brd ff:ff:ff:ff:ff:ff
+</span></span><span style="display:flex;"><span>    inet 10.90.20.60/24 scope global enp2s0
+</span></span><span style="display:flex;"><span>       valid_lft forever preferred_lft forever
+</span></span></code></pre></div><p>Sempre que a instância acessa a Internet, o OCI se encarrega de fazer um NAT 1:1 deste endereço privado para o seu respectivo público associado à VNIC.</p>
+<p>As rotas da tabela <code>internet</code> seguem o mesmo principio de configuração das demais, tendo sempre uma rota default que aponta para o gateway da sub-rede que agora é o endereço <code>10.90.20.1</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip route show table internet
+</span></span><span style="display:flex;"><span>default via 10.90.20.1 dev enp2s0
+</span></span><span style="display:flex;"><span>10.90.0.0/16 dev enp2s0 scope link
+</span></span></code></pre></div><p>Da mesma forma como ocorre nas configurações que utilizam a tabela <code>externo</code>, o Kernel Linux também precisa ser instruído a consultar a tabela <code>internet</code> sempre que a comunicação tiver origem ou destino para a rede <code>10.90.0.0/16</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 10.90.0.0/16 table internet prio <span style="color:#ae81ff">50</span>
+</span></span><span style="display:flex;"><span>$ ip rule add from 10.90.0.0/16 table internet prio <span style="color:#ae81ff">51</span>
+</span></span></code></pre></div><p>Por fim, como essa VNIC é responsável pela comunicação com a Internet, e o objetivo é permitir que os recursos das VCNs VCN-APPL-1 e VCN-APPL-2 acessem a Internet por meio do firewall, é necessário instruir o Kernel Linux a consultar a tabela <code>internet</code> sempre que o destino do tráfego não corresponder a nenhuma das redes previamente configuradas:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ip rule add to 0.0.0.0/0 table internet prio <span style="color:#ae81ff">200</span>
+</span></span></code></pre></div><p>Observe que essa regra possui a menor prioridade dentro de toda a cadeia de regras. Isso é proposital, pois faz com que o Kernel Linux consulte a tabela <code>internet</code> somente por último, depois de avaliar as regras mais específicas.</p>
+<p>Além das configurações realizadas com <code>ip rule</code>, há uma regra adicional necessária para que a comunicação com a Internet funcione.</p>
+<p>Essa regra não faz parte do <strong>Policy Routing</strong>, mas sim da configuração de <strong>NAT</strong>, e deve ser criada por meio do comando <code>iptables</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ iptables -t nat -A POSTROUTING -o enp2s0 -j MASQUERADE
+</span></span></code></pre></div><p>Esta é uma regra de NAT com a função de <strong>mascaramento</strong> (<code>MASQUERADE</code>). Ela é necessária porque, dentro do OCI, o tráfego com destino à Internet deve sair pelo endereço IP <code>10.90.20.60</code>, associado à VNIC <code>vnic-internet</code>.</p>
+<p>Neste caso, por exemplo, quando a comunicação é originada por um recurso da VCN-APPL-1 com destino à Internet, o pacote chega ao firewall e é processado pela cadeia de regras de <code>ip rule</code>.</p>
+<p>Após a decisão de roteamento (<code>POSTROUTING</code>) indicar a saída pelo gateway <code>10.90.20.1</code>, o pacote precisa ter seu endereço IP de origem alterado para o endereço IP da VNIC <code>vnic-internet</code>, ou seja, <code>10.90.20.60</code>.</p>
+<p><img src="/oci/network/oci-linux-policy-routing/img/oci-linux-nat-1.png" alt="OCI Linux NAT #1"></p>
+<p>Essa tradução do endereço de origem é realizada pela regra de <code>iptables</code> apresentada acima.</p>
+<h2 id="nota-final">Nota Final</h2>
+<p>Todas essas configurações de <strong>Policy Routing</strong> da topologia de referencia podem ser encontradas no script localizado em <code>terraform/vm-firewall/scripts/rc-firewall.sh</code>.</p>
+<p>Durante a criação da infraestrutura com o comando <code>terraform apply</code>, o script <code>rc-firewall.sh</code> é enviado ao <em><a href="https://docs.oracle.com/en-us/iaas/Content/Object/Concepts/objectstorageoverview.htm">Object Storage</a></em>. Posteriormente, durante o processo de boot, o firewall baixa esse script e o executa automaticamente.</p>
+<p>As mesmas configurações são aplicadas aos dois firewalls da topologia de referência, <code>firewall-1</code> e <code>firewall-2</code>. Ambos funcionam em modo <strong>ativo-ativo</strong>, por meio do <em><a href="https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/home.htm">Network Load Balance</a></em>, que distribui o tráfego de rede entre eles utilizando o <em><a href="https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/introduction.htm#Policies">algoritmo de balanceamento 2-Tuple Hash</a></em>.</p>
+<h2 id="referências">Referências</h2>
+<ul>
+<li>
+<p><strong>Linux Advanced Routing &amp; Traffic Control HOWTO</strong></p>
+<ul>
+<li><a href="https://lartc.org/howto/index.html">https://lartc.org/howto/index.html</a></li>
+</ul>
+</li>
+<li>
+<p><strong>Linux netfilter Hacking HOWTO</strong></p>
+<ul>
+<li><a href="https://www.netfilter.org/documentation/HOWTO/netfilter-hacking-HOWTO.html">https://www.netfilter.org/documentation/HOWTO/netfilter-hacking-HOWTO.html</a></li>
+</ul>
+</li>
+<li>
+<p><strong>IP Command Reference</strong></p>
+<ul>
+<li><a href="http://linux-ip.net/gl/ip-cref/">http://linux-ip.net/gl/ip-cref/</a></li>
+</ul>
+</li>
+<li>
+<p><strong>Policy Routing With Linux - Online Edition</strong></p>
+<ul>
+<li><a href="http://www.policyrouting.org/PolicyRoutingBook/ONLINE/TOC.html">http://www.policyrouting.org/PolicyRoutingBook/ONLINE/TOC.html</a></li>
+</ul>
+</li>
+</ul>
+
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+

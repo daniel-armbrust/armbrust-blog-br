@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>VNIC on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/vnic/</link>
+    <description>Recent content in VNIC on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Sun, 10 Aug 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/vnic/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Firewall e Conntrack Table</title>
+      <link>http://localhost:1313/oci/network/firewall-e-conntrack-table/</link>
+      <pubDate>Sun, 10 Aug 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/firewall-e-conntrack-table/</guid>
+      <description>&lt;h2 id=&#34;security-list-vs-network-security-group&#34;&gt;Security List vs. Network Security Group&lt;/h2&gt;&#xA;&lt;p&gt;O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e 4 do modelo OSI, para controle de tráfego de entrada (ingress) e saída (egress). O funcionamento de ambos é idêntico: todo tráfego é bloqueado por padrão até que encontre uma regra que permita sua passagem (ALLOW). São eles:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Nota sobre VNICs</title>
+      <link>http://localhost:1313/oci/network/nota-sobre-vnics/</link>
+      <pubDate>Mon, 28 Jul 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/nota-sobre-vnics/</guid>
+      <description>&lt;h2 id=&#34;alguns-detalhes&#34;&gt;Alguns Detalhes&lt;/h2&gt;&#xA;&lt;p&gt;VNIC (Virtual Network Interface Card), nada mais é do que uma interface de rede lógica associada a uma interface de rede (NIC). Uma VNIC reside em uma sub-rede e é responsável por permitir que uma instância computacional se comunique com a rede. Ou seja, todo recurso computacional que possui conectividade de rede está possui pelo menos uma VNIC.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

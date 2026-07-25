@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Local Peering on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/local-peering/</link>
+    <description>Recent content in Local Peering on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Mon, 03 Nov 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/local-peering/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Hub &amp; Spoke com Local Peering Gateway (LPG)</title>
+      <link>http://localhost:1313/oci/network/hub-spoke-com-local-peering-gateway-lpg/</link>
+      <pubDate>Mon, 03 Nov 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/hub-spoke-com-local-peering-gateway-lpg/</guid>
+      <description>&lt;h2 id=&#34;local-peering-gateway-lpg&#34;&gt;Local Peering Gateway (LPG)&lt;/h2&gt;&#xA;&lt;p&gt;O &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/localVCNpeering.htm&#34;&gt;Local Peering Gateway (LPG)&lt;/a&gt; é utilizado para conectar duas VCNs diretamente.&lt;/p&gt;&#xA;&lt;p&gt;Hoje, já não é mais recomendado utilizar LPGs para conectar VCNs pois, a função que o LPG desempenha foi substituída pelo &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingDRGs.htm&#34;&gt;DRG&lt;/a&gt;, que é o modo atualmente recomendado para se construír topologias de redes no OCI.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

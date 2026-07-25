@@ -1,0 +1,15 @@
+{{- $page := . -}}
+<ul>
+  {{- range $page.Sections.ByTitle }}
+    <li>
+      <a href="{{ .RelPermalink }}">{{ .LinkTitle | markdownify }}</a>
+      {{- partial "tree.html" . -}}
+    </li>
+  {{- end }}
+
+  {{- range $page.RegularPages.ByDate.Reverse }}
+    <li>
+      <a href="{{ .RelPermalink }}">{{ .LinkTitle | markdownify }}</a>
+    </li>
+  {{- end }}
+</ul>

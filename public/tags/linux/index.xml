@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Linux on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/linux/</link>
+    <description>Recent content in Linux on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Sat, 03 Jan 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/linux/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>OCI &#43; Linux Policy Routing</title>
+      <link>http://localhost:1313/oci/network/oci-linux-policy-routing/</link>
+      <pubDate>Sat, 03 Jan 2026 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/oci-linux-policy-routing/</guid>
+      <description>&lt;h2 id=&#34;roteamento-por-destino&#34;&gt;Roteamento por Destino&lt;/h2&gt;&#xA;&lt;p&gt;Por padrão, um roteador toma decisões de roteamento lendo o campo &lt;strong&gt;Destination Address&lt;/strong&gt; do cabeçalho IP (e em teoria, mas não na prática, no campo TOS). Após obter o endereço IP presente no &lt;strong&gt;Destination Address&lt;/strong&gt;, o próximo passo é consultar a tabela de rotas (&lt;strong&gt;route table&lt;/strong&gt;), para determinar qual será a &lt;strong&gt;interface de rede de saída&lt;/strong&gt; que será usada para &lt;strong&gt;encaminhar o pacote&lt;/strong&gt;. Em outras palavras, a decisão de roteamento é baseada exclusivamente no &lt;strong&gt;endereço de destino&lt;/strong&gt;, processo que também é chamado de &lt;strong&gt;Roteamento por Destino (destination-based routing)&lt;/strong&gt;.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

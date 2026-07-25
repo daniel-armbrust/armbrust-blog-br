@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Roteamento via Firewall Central (hub &amp; spoke) | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Roteamento via Firewall Central (hub &amp; spoke)</span></h1>
+
+<h2 class="date">2025/10/22</h2>
+</div>
+
+<main>
+<h2 id="topologia-hub--spoke">Topologia Hub &amp; Spoke</h2>
+<p>A topologia do tipo <strong>Hub &amp; Spoke</strong> é muito utilizada em ambientes corporativos, nos quais há, geralmente, a necessidade de um firewall mais sofisticado (VCN Hub), capaz de oferecer maior controle e proteção sobre o tráfego entre aplicações (VCNs Spoke), sejam entre VCNs ou no fluxo de dados entre o ambiente on-premises e o OCI.</p>
+<p>De forma simples, a ideia geral é: <strong>forçar, de forma transparente, que todo o tráfego entre aplicações passe por um firewall central.</strong></p>
+<p>Para ilustrar o funcionamento dessa topologia, será utilizado o diagrama abaixo:</p>
+<p><img src="/oci/network/roteamento-via-firewall-central-hub-spoke/img/hub-spoke-1.png" alt="Hub &amp; Spoke #1"></p>
+<h3 id="tabelas-de-rotas">Tabelas de Rotas</h3>
+<p>Falando das tabelas de roteamento, temos as que seguem:</p>
+<ul>
+<li>
+<p><strong>Subnet Route Table</strong></p>
+<ul>
+<li>Cada sub-rede tem a sua própria tabela de roteamento sendo que, há somente uma regra de roteamento no qual direciona todo o tráfego para o DRG (0.0.0.0/0).</li>
+</ul>
+</li>
+<li>
+<p><strong>DRG Route Table</strong></p>
+<ul>
+<li>Há duas tabelas de roteamento do DRG que são:
+<ul>
+<li><strong>TO-FIREWALL</strong>
+<ul>
+<li>Usada para direcionar todo o tráfego ao anexo do firewall (DRG‑ATTCH_VCN‑FIREWALL).</li>
+<li>A tabela contém apenas uma rota estática e deve ser aplicada a todos os anexos cujo tráfego precise obrigatoriamente passar pelo firewall.</li>
+</ul>
+</li>
+<li><strong>FROM-FIREWALL</strong>
+<ul>
+<li>Utilizada pelo anexo do firewall e consultada no retorno do tráfego para a rede. Ou seja, quando o firewall envia a resposta.</li>
+<li>As rotas dessa tabela são inseridas automaticamente via instrução <strong>Match All</strong> do <strong>Import Route Distribution</strong> desta tabela, pois o firewall conhece e aprende todas as redes.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>VCN Route Table</strong></p>
+<ul>
+<li>Apesar do nome fazer referência a VCN, trata‑se de uma tabela de sub‑rede configurada no anexo do firewall (DRG-ATTCH_VCN-FIREWALL).</li>
+<li>A tabela TO-FIREWALL-IP desempenha a função de <strong><em>ingress routing</em></strong> e é consultada assim que o tráfego entra na VCN-FIREWALL, no qual possui apenas uma regra estática cujo next‑hop aponta para o endereço IP do firewall (192.168.100.50).</li>
+</ul>
+</li>
+</ul>
+<h3 id="fluxo-de-roteamento">Fluxo de Roteamento</h3>
+<p>Suponha que a compute instance <code>VM-A</code> (<code>10.100.20.5</code>) da <code>VCN-A</code> (Spoke) queira se comunicar com a compute instance <code>VM-B</code> (<code>172.16.50.100</code>) da <code>VCN-B</code> (Spoke). As decisões de roteamento da origem para o destino, que fazem o tráfego passar pelo <code>firewall</code> (<code>192.168.100.50</code>) na <code>VCN‑FIREWALL</code> (Hub), são:</p>
+<ol>
+<li>
+<p>A primeira decisão de roteamento ocorre no próprio host <code>10.100.20.5</code>. Nessa etapa o host determina o endereço IP e a interface de rede que será usada para enviar o tráfego. Normalmente existe uma <strong>rota default</strong> apontando para o gateway da sub‑rede (<code>10.100.20.1</code>).</p>
+</li>
+<li>
+<p>A segunda decisão de roteamento ocorre no gateway da sub‑rede (<code>10.100.20.1</code>). O gateway consulta sua própria tabela de rotas para determinar o next‑hop (tabela de rotas da sub-rede). No exemplo, tudo deve ser encaminhado para o <code>DRG</code> (<code>0.0.0.0/0</code>).</p>
+</li>
+<li>
+<p>A terceira decisão de roteamento ocorre quando o tráfego entra no <code>DRG</code>, que consulta a tabela de rotas <strong>TO‑FIREWALL</strong> para determinar qual é o próximo anexo a seguir. Esta tabela contém uma regra estática que encaminha todo o tráfego (<code>0.0.0.0/0</code>) para o anexo <strong>DRG-ATTCH_VCN-FIREWALL</strong>, onde está a compute instance <code>firewall</code> (<code>192.168.100.50</code>) na <code>VCN‑FIREWALL</code>.</p>
+</li>
+<li>
+<p>A quarta decisão de roteamento ocorre quando o tráfego sai do <code>DRG</code> e passa a entrar na <code>VCN-FIREWALL</code>. O anexo <strong>DRG-ATTCH_VCN-FIREWALL</strong> possui uma tabela de rotas de sub-rede chamada <strong>TO-FIREWALL-IP</strong>, que contém uma única rota estática (<code>0.0.0.0/0</code>) que encaminha todo o tráfego para o endereço IP do firewall <code>192.168.100.50</code>.</p>
+</li>
+<li>
+<p>Na quinta etapa o tráfego atinge a compute instance <code>firewall</code> (<code>192.168.100.50</code>), que realiza a inspeção e, caso permita a passagem, consulta sua tabela de rotas do host para devolver o tráfego para o <code>DRG</code>. Normalmente há uma <strong>rota default</strong> apontando para o gateway da sub‑rede (<code>192.168.100.1</code>).</p>
+</li>
+<li>
+<p>A sexta decisão de roteamento ocorre no gateway da sub‑rede (<code>192.168.100.1</code>). A tabela de rotas da sub‑rede contém as rotas para as redes da <code>VCN‑A</code> e <code>VCN‑B</code> (ambas apontando para o DRG) e uma <strong>rota default</strong> que permite ao firewall acessar a Internet via <strong>NAT Gateway</strong>.</p>
+</li>
+<li>
+<p>Na sétima etapa o tráfego sai da <code>VCN‑FIREWALL</code> e, ao entrar no <code>DRG</code>, a tabela <strong>FROM‑FIREWALL</strong> é consultada. Essa tabela contém apenas rotas dinâmicas importadas automaticamente pela <strong>Import Route Distribution</strong> através da instrução <strong>Match All</strong>, de forma que ela passa a &ldquo;conhecer&rdquo; todas as redes conectadas ao <code>DRG</code>.</p>
+</li>
+<li>
+<p>Por fim, o tráfego sai do <code>DRG</code> e chega ao compute instance de destino <code>172.16.50.100</code>.</p>
+</li>
+</ol>
+<p>O tráfego de retorno, ou seja, a resposta da compute instance <code>VM-B</code> (<code>172.16.50.100</code>) para <code>VM-A</code> (<code>10.100.20.5</code>), segue o mesmo fluxo de decisões de roteamento descrito anteriormente, em sentido inverso.</p>
+<h2 id="comandos-de-exemplo">Comandos de Exemplo</h2>
+<p>No diretório <a href="https://github.com/daniel-armbrust/oci-network-basics/tree/main/scripts/roteamento-via-firewall-central" target="_blank"><code>scripts/roteamento-via-firewall-central</code></a> há um conjunto de scripts para criar a topologia apresentada através do OCI CLI.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -1F
+</span></span><span style="display:flex;"><span>create/
+</span></span><span style="display:flex;"><span>data.env
+</span></span><span style="display:flex;"><span>destroy/
+</span></span></code></pre></div><p>O arquivo <code>data.env</code> define variáveis globais usadas pelos scripts. Elas specificam nomes dos recursos, endereços IP, regras de roteamento, IDs das imagens Linux, tipo de shape e quantidades de OCPU e memória para as compute instances.</p>
+<p>Antes de executar os scripts, crie e exporte as seguintes variáveis de ambiente:</p>
+<ul>
+<li>
+<p><strong>COMPARTMENT_ID</strong></p>
+<ul>
+<li>ID do compartment onde os recursos serão criados no seu tenancy.</li>
+</ul>
+</li>
+<li>
+<p><strong>SSH_PUB_KEY_PATH</strong></p>
+<ul>
+<li>Caminho para a chave pública SSH que será usada pelas três compute instances (<code>VM-A</code>, <code>VM-B</code> e <code>FIREWALL</code>).</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ export COMPARTMENT_ID<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span>
+</span></span><span style="display:flex;"><span>$ export SSH_PUB_KEY_PATH<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;/caminho/chave-publica-ssh.key&#34;</span>
+</span></span></code></pre></div><p>Para criar os recursos, execute o script <code>create.sh</code> a partir do diretório <code>create/</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cd create/
+</span></span><span style="display:flex;"><span>$ ./create.sh
+</span></span></code></pre></div><p>Para excluir os recursos, execute o script <code>destroy.sh</code> a partir do diretório <code>destroy/</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cd destroy/
+</span></span><span style="display:flex;"><span>$ ./destroy.sh
+</span></span></code></pre></div>
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+

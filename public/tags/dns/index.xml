@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DNS on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/dns/</link>
+    <description>Recent content in DNS on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Thu, 18 Dec 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/dns/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>DNS Privado e Híbrido</title>
+      <link>http://localhost:1313/oci/network/dns-privado-e-hibrido/</link>
+      <pubDate>Thu, 18 Dec 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/dns-privado-e-hibrido/</guid>
+      <description>&lt;h2 id=&#34;introdução&#34;&gt;Introdução&lt;/h2&gt;&#xA;&lt;p&gt;Podemos dizer de forma bem resumida que o DNS ou Sistema de Nomes de Domínio, é um tipo de banco de dados distribuído e especializado em resolver nomes de domínios em endereços IP numéricos e vice-versa.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

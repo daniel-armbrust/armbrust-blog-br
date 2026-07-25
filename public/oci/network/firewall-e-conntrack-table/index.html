@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Firewall e Conntrack Table | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Firewall e Conntrack Table</span></h1>
+
+<h2 class="date">2025/08/10</h2>
+</div>
+
+<main>
+<h2 id="security-list-vs-network-security-group">Security List vs. Network Security Group</h2>
+<p>O serviço de rede do OCI disponibiliza dois tipos de firewalls, nas camadas 3 e 4 do modelo OSI, para controle de tráfego de entrada (ingress) e saída (egress). O funcionamento de ambos é idêntico: todo tráfego é bloqueado por padrão até que encontre uma regra que permita sua passagem (ALLOW). São eles:</p>
+<h3 id="security-list">Security List</h3>
+<p>Esse é o firewall associado à sub-rede e aplicado a todas as suas VNICs. Como resultado, todo o tráfego de entrada (ingress) e saída (egress) é inspecionado com base nas regras definidas na Security List.</p>
+<p><img src="/oci/network/firewall-e-conntrack-table/img/oci-seclist-1.png" alt="Security List #1"></p>
+<p>Toda sub-rede deve ter pelo menos uma security list e pode ter no máximo, cinco security lists empilhadas. Nesse caso, todas as Security Lists são avaliadas em conjunto na busca por uma regra que permita o tráfego (ALLOW).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network security-list update <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --security-list-id <span style="color:#e6db74">&#34;ocid1.securitylist.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --ingress-security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;   &#34;protocol&#34;: &#34;6&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;   &#34;source&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;   &#34;tcpOptions&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;       &#34;destinationPortRange&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;          &#34;min&#34;: 80,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;          &#34;max&#34;: 80
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;       }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;   }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --force
+</span></span></code></pre></div><h3 id="network-security-group-nsg">Network Security Group (NSG)</h3>
+<p>Este é o firewall que pode ser associado a uma VNIC ou a um grupo de VNICs. Nesse caso, a inspeção do tráfego é realizada no nível da VNIC, permitindo que cada VNIC possua suas próprias regras exclusivas para controle do tráfego.</p>
+<p><img src="/oci/network/firewall-e-conntrack-table/img/oci-nsg-1.png" alt="Network Security Group (NSG) #1"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network nsg create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;web-nsg&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network nsg rules add <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --nsg-id <span style="color:#e6db74">&#34;ocid1.networksecuritygroup.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;    &#34;direction&#34;: &#34;INGRESS&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;    &#34;protocol&#34;: &#34;6&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;    &#34;source&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;    &#34;tcpOptions&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;       &#34;destinationPortRange&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;          &#34;min&#34;: 80,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;          &#34;max&#34;: 80
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;       }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;    }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network vnic update <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vnic-id ocid1.vnic.oc1.sa-saopaulo-1.aaaaaaaa <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --nsg-ids <span style="color:#e6db74">&#39;[&#34;ocid1.networksecuritygroup.oc1.sa-saopaulo-1.aaaaaaaa&#34;]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --force
+</span></span></code></pre></div><h2 id="conntrack-table">Conntrack Table</h2>
+<p>Toda regra de segurança que for criada, seja uma regra de Security List ou Network Security Group (NSG), pode ser definida como sendo do tipo <strong>Stateful</strong> ou <strong>Stateless</strong>. Por padrão, as regras são criadas como <strong>Stateful</strong>.</p>
+<p>Uma regra <strong>Stateful</strong> utiliza uma funcionalidade chamada <strong>Connection Tracking</strong>, que mantém informações sobre as conexões permitidas pelas Security Lists ou Network Security Groups (NSG).</p>
+<p>Por exemplo, suponha que exista uma regra em uma Security List que permita tráfego de qualquer origem (0.0.0.0/0) com destino à porta 80/TCP. Após esse tráfego ser inspecionado e permitido, a Security List armazena em uma espécie de <strong>buffer</strong>, mais precisamente, em uma <strong>tabela</strong>, informações como o IP de origem, porta e protocolo de origem, IP de destino, porta e protocolo de destino (dados do <strong>socket da conexão</strong>). Essa tabela é chamada de <strong>Conntrack Table</strong>.</p>
+<p>A Conntrack Table, no exemplo mencionado, é consultada quando há tráfego de retorno, ou seja, quando o recurso computacional envia uma resposta. Nesse momento, a Security List utiliza essa tabela para permitir automaticamente o tráfego de volta ao originador. Dessa forma, não é necessário avaliar as regras de egress para a resposta. Diz-se, então, que a Security List mantém o <em>&ldquo;estado da conexão&rdquo;</em> através da sua Conntrack Table, ou seja, realiza o <strong>Connection Tracking</strong>.</p>
+<p>Já as regras do tipo <strong>Stateless</strong> não há <strong>Conntrack Table</strong> e, portanto, não existe limite ou tabela que mantém o estado das conexões. No entanto, para cada regra de entrada (ingress), é necessário definir também uma regra de saída (egress). Em outras palavras, é preciso configurar regras que permitam tanto o tráfego de entrada quanto o de saída (ida e volta). Do ponto de vista administrativo, configurar regras do tipo <strong>Stateless</strong> é mais trabalhoso, pois exige a definição de um maior número de regras.</p>
+<p>A recomendação geral é: <strong>utilize regras do tipo Stateless em sub-redes que hospedam firewalls, load balancers públicos ou qualquer sub-rede que possa ter (ou tenha) alto volume de tráfego.</strong></p>
+<h2 id="compute-instance-firewall">Compute Instance Firewall</h2>
+<p>Todo novo compute instance criado a partir de imagens de plataforma, como Oracle Linux ou Windows, já vem com o firewall do sistema operacional ativado por padrão. Nesse caso, apenas as portas administrativas são liberadas: 22/TCP para SSH no Linux e 3389/TCP para Remote Desktop (RDP) no Windows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># systemctl status firewalld</span>
+</span></span><span style="display:flex;"><span>● firewalld.service - firewalld - dynamic firewall daemon
+</span></span><span style="display:flex;"><span>     Loaded: loaded <span style="color:#f92672">(</span>/usr/lib/systemd/system/firewalld.service; disabled; preset: enabled<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>     Active: active <span style="color:#f92672">(</span>running<span style="color:#f92672">)</span> since Mon 2026-01-23 10:59:46 GMT; 1s ago
+</span></span><span style="display:flex;"><span>       Docs: man:firewalld<span style="color:#f92672">(</span>1<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    Process: <span style="color:#ae81ff">7142</span> ExecStartPost<span style="color:#f92672">=</span>/usr/bin/firewall-cmd --state <span style="color:#f92672">(</span>code<span style="color:#f92672">=</span>exited, status<span style="color:#f92672">=</span>0/SUCCESS<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>   Main PID: <span style="color:#ae81ff">7139</span> <span style="color:#f92672">(</span>firewalld<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      Tasks: <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span>limit: 22760<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>     Memory: 31.1M <span style="color:#f92672">(</span>peak: 52.5M<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        CPU: 646ms
+</span></span><span style="display:flex;"><span>     CGroup: /system.slice/firewalld.service
+</span></span><span style="display:flex;"><span>             └─7139 /usr/bin/python3 -s /usr/sbin/firewalld --nofork --nopid
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Jan <span style="color:#ae81ff">01</span> 10:59:45 bastion systemd<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span>: Starting firewalld - dynamic firewall daemon...
+</span></span><span style="display:flex;"><span>Jan <span style="color:#ae81ff">01</span> 10:59:46 bastion systemd<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span>: Started firewalld - dynamic firewall daemon.
+</span></span></code></pre></div><p>A razão disso é permitir que apenas o usuário root em instâncias Linux ou usuários do grupo Administradores em instâncias Windows realizem conexões de saída para os endpoints da rede iSCSI (<code>169.254.0.2:3260</code> e <code>169.254.2.0/24:3260</code>).</p>
+<p>Recomenda-se não remover esse serviço nem reconfigurar essas regras. Caso contrário, usuários sem privilégios de root ou de administrador poderão obter acesso ao boot volume da instância.</p>
+
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+

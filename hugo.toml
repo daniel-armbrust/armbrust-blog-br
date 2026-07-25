@@ -1,0 +1,79 @@
+baseURL = "https://daniel-armbrust.github.io/"
+languageCode = "pt-br"
+title = "Armbrust Blog"
+theme = "hugo-xmin"
+
+defaultContentLanguage = "pt"
+defaultContentLanguageInSubdir = false
+
+enableRobotsTXT = true
+summaryLength = 30
+
+[pagination]
+pagerSize = 10
+
+[taxonomies]
+category = "categories"
+tag = "tags"
+
+[permalinks]
+posts = "/posts/:slug/"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[languages]
+  [languages.pt]
+    languageName = "Português"
+    languageCode = "pt-br"
+    weight = 1
+    title = "Armbrust Blog"
+
+    [languages.pt.params]
+      description = "Notas sobre Computação em Nuvem, IA, Programação, Redes e Linux."
+
+    [[languages.pt.menus.main]]
+      name = "Home"
+      url = "/"
+      weight = 1
+
+    [[languages.pt.menus.main]]
+      name = "OCI"
+      url = "/oci/"
+      weight = 2
+
+    [[languages.pt.menus.main]]
+      name = "whoami"
+      url = "/whoami/"
+      weight = 3
+
+  [languages.en]
+    languageName = "English"
+    languageCode = "en"
+    weight = 2
+    title = "Armbrust Blog"
+
+    [languages.en.params]
+      description = "Notes about Cloud Computing, AI, Programmimg, Network and Linux."
+
+    [[languages.en.menus.main]]
+      name = "Home"
+      url = "/en/"
+      weight = 1
+
+    [[languages.en.menus.main]]
+      name = "OCI"
+      url = "/en/oci/"
+      weight = 2
+
+    [[languages.en.menus.main]]
+      name = "AI"
+      url = "/en/ia/"
+      weight = 3
+
+    [[languages.en.menus.main]]
+      name = "About"
+      url = "/en/about/"
+      weight = 4

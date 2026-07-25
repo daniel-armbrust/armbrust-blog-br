@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Network Visualizer on Armbrust Blog</title>
+    <link>http://localhost:1313/tags/network-visualizer/</link>
+    <description>Recent content in Network Visualizer on Armbrust Blog</description>
+    <generator>Hugo</generator>
+    <language>pt-br</language>
+    <lastBuildDate>Mon, 15 Dec 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/network-visualizer/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Network Visualizer</title>
+      <link>http://localhost:1313/oci/network/network-visualizer/</link>
+      <pubDate>Mon, 15 Dec 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/oci/network/network-visualizer/</guid>
+      <description>&lt;h2 id=&#34;introdução&#34;&gt;Introdução&lt;/h2&gt;&#xA;&lt;p&gt;O &lt;a href=&#34;https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm&#34;&gt;Network Visualizer&lt;/a&gt; é uma ferramenta do OCI útil para visualizar a topologia de rede criada em uma região. Acesse-a pelo menu &lt;strong&gt;Network&lt;/strong&gt; &amp;gt; &lt;strong&gt;Network Command Center&lt;/strong&gt;.&lt;/p&gt;&#xA;&lt;p&gt;&lt;img src=&#34;http://localhost:1313/oci/network/network-visualizer/img/network-visualizer-1.png&#34; alt=&#34;Network Viualizer #1&#34;&gt;&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

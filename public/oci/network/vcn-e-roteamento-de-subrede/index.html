@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VCN e Roteamento de Subrede | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">VCN e Roteamento de Subrede</span></h1>
+
+<h2 class="date">2025/07/12</h2>
+</div>
+
+<main>
+<h2 id="vcn-virtual-cloud-network">VCN (Virtual Cloud Network)</h2>
+<p>Uma das primeiras atividades ao iniciar os trabalhos com o OCI é configurar corretamente uma <strong>VCN (Virtual Cloud Network)</strong> e seus componentes de rede. Pode-se afirmar que uma VCN é uma rede maior que pode ser subdividida em partes menores, chamadas de sub-redes (subnets).</p>
+<p>Cada sub-rede consiste em uma faixa contínua de endereços IP únicos (conforme RFC1918) que existem dentro da mesma VCN. É nas sub-redes que se pode criar instâncias computacionais e outros recursos que dependem de uma rede IP para funcionar.</p>
+<p>A sub-rede atua como uma unidade de configuração para os recursos criados dentro dela, mais especificamente para as VNICs que ali forem criadas. Isso significa que todas as VNICs e outros recursos em nuvem criados na mesma sub-rede compartilham a mesma <strong>Route Table</strong>, <strong>Security Lists</strong> e <strong>DHCP Options</strong>.</p>
+<p>Um aspecto relevante ao criar uma nova VCN, no que diz respeito ao roteamento, é que ela vem automaticamente com uma route table padrão (<code>Default Route Table for &lt;NOME-DA-VCN&gt;</code>). Todas as sub-redes criadas dentro dessa VCN, a menos que especificado de outra forma, utilizarão essa mesma route table. Isso pode dificultar a configuração do roteamento quando as sub-redes dessa VCN exigem configurações de roteamento de forma independente.</p>
+<p>Por exemplo, em uma VCN que contém duas sub-redes, uma pública e outra privada, <strong>é esperado que cada sub-rede tenha sua própria tabela de roteamento</strong>. A sub-rede pública precisa de uma rota padrão que direcione o tráfego para o <strong>Internet Gateway (IGW)</strong>, permitindo que os recursos criados recebam e enviem tráfego da Internet. Por outro lado, na sub-rede privada, a rota padrão costuma direcionar o tráfego para um <strong>NAT Gateway (NGW)</strong> ou para o <strong>DRG (Dynamic Routing Gateway)</strong>.</p>
+<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-vcn-1.png" alt="VCN Default Route Table #1"></p>
+<p><strong>A boa prática que fica é:</strong></p>
+<ol>
+<li>Criar a VCN.</li>
+<li>Criar os Gateways de Comunicação necessários da VCN (Internet Gateway, Nat Gateway e Service Gateway).</li>
+<li>Criar a(s) Route Tables específicas, de acordo com o número e tipo da(s) sub-redes (por exemplo, criar a Route Table <code>rt_subnpub</code> para a sub-rede pública e <code>rt_subnprv</code> para a sub-rede privada).</li>
+<li>Criar a(s) Security Lists conforme a quantidade necessária de sub-redes.</li>
+<li>Configurar as regras de roteamento e as regras das Security Lists.</li>
+<li>OPCIONAL: Se necessário, criar os DHCP Options de forma independente, um para cada sub-rede (pessoalmente, prefiro utilizar o DHCP Options que foi criado junto com a VCN para todas as sub-redes da VCN).</li>
+<li>Criar a(s) sub-redes e utilizar a tabela de roteamento e a Security List criadas de forma independente para cada sub-rede.</li>
+</ol>
+<p>O resultado final, por exemplo, para cada VCN, será similar ao diagrama abaixo:</p>
+<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-vcn-2.png" alt="VCN Default Route Table #2"></p>
+<h2 id="comandos-de-exemplo">Comandos de Exemplo</h2>
+<h3 id="vcn">VCN</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network vcn create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaan&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --cidr-block <span style="color:#e6db74">&#34;10.100.0.0/16&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;vcn-a&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --dns-label <span style="color:#e6db74">&#34;vcna&#34;</span>
+</span></span></code></pre></div><h3 id="gateways-de-comunicação">Gateways de Comunicação</h3>
+<h4 id="internet-gateway-igw">Internet Gateway (IGW)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network internet-gateway create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;igw&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --is-enabled <span style="color:#e6db74">&#34;true&#34;</span>
+</span></span></code></pre></div><h4 id="nat-gateway-ngw">NAT Gateway (NGW)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network nat-gateway create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;ngw&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --block-traffic <span style="color:#e6db74">&#34;false&#34;</span>
+</span></span></code></pre></div><h4 id="service-gateway-sgw">Service Gateway (SGW)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network service list
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;data&#34;</span>: <span style="color:#f92672">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;cidr-block&#34;</span>: <span style="color:#e6db74">&#34;all-gru-services-in-oracle-services-network&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;All GRU Services In Oracle Services Network&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;ocid1.service.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;All GRU Services In Oracle Services Network&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;cidr-block&#34;</span>: <span style="color:#e6db74">&#34;oci-gru-objectstorage&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;OCI GRU Object Storage&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;ocid1.service.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;OCI GRU Object Storage&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network service-gateway create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;sgw&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --services <span style="color:#e6db74">&#39;[{&#34;serviceId&#34;: &#34;ocid1.service.oc1.sa-saopaulo-1.aaaaaaaa&#34;}]&#39;</span>
+</span></span></code></pre></div><h3 id="route-tables">Route Tables</h3>
+<h4 id="route-table-da-sub-rede-pública-rt_subnpub">Route Table da sub-rede pública (rt_subnpub)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network route-table create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;rt_subnpub&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --route-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destination&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destinationType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;networkEntityId&#34;: &#34;ocid1.internetgateway.oc1.sa-saopaulo-1.aaaaaaaa&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span>
+</span></span></code></pre></div><h4 id="route-table-da-sub-rede-privada-rt_subnprv">Route Table da sub-rede privada (rt_subnprv)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network route-table create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;rt_subnprv&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --route-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destination&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destinationType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;networkEntityId&#34;: &#34;ocid1.natgateway.oc1.sa-saopaulo-1.aaaaaaaa&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; },{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destination&#34;: &#34;all-gru-services-in-oracle-services-network&#34;, \
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destinationType&#34;: &#34;SERVICE_CIDR_BLOCK&#34;, 
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;networkEntityId&#34;: &#34;ocid1.servicegateway.oc1.sa-saopaulo-1.aaaaaaaa&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span>
+</span></span></code></pre></div><h3 id="security-lists">Security Lists</h3>
+<h4 id="security-list-da-sub-rede-pública-secl-1_subnpub">Security List da sub-rede pública (secl-1_subnpub)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network security-list create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;secl-1_subnpub&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --ingress-security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;source&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;sourceType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;protocol&#34;: &#34;6&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;isStateless&#34;: false,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;tcpOptions&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;         &#34;destinationPortRange&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;              &#34;min&#34;: 443,&#34;max&#34;: 443
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;          }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --egress-security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destination&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destinationType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;protocol&#34;: &#34;all&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;isStateless&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">}]&#39;</span>
+</span></span></code></pre></div><h4 id="security-list-da-sub-rede-privada-secl-1_subnprv">Security List da sub-rede privada (secl-1_subnprv)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network security-list create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;secl-1_subnprv&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --ingress-security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;source&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;sourceType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;protocol&#34;: &#34;all&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;isStateless&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --egress-security-rules <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destination&#34;: &#34;0.0.0.0/0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;destinationType&#34;: &#34;CIDR_BLOCK&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;protocol&#34;: &#34;all&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;isStateless&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">}]&#39;</span>
+</span></span></code></pre></div><h3 id="dhcp-options">DHCP Options</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network dhcp-options create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;dhcp_options&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --options <span style="color:#e6db74">&#39;[{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt;     &#34;type&#34;: &#34;DomainNameServer&#34;, &#34;serverType&#34;: &#34;VcnLocalPlusInternet&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&gt; }]&#39;</span>
+</span></span></code></pre></div><h3 id="sub-redes">Sub-redes</h3>
+<h4 id="sub-rede-pública-subnpub">Sub-rede pública (subnpub)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network subnet create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --cidr-block <span style="color:#e6db74">&#34;10.100.30.0/24&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;subnpub&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --dns-label <span style="color:#e6db74">&#34;subnpub&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --route-table-id <span style="color:#e6db74">&#34;ocid1.routetable.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --security-list-ids <span style="color:#e6db74">&#39;[&#34;ocid1.securitylist.oc1.sa-saopaulo-1.aaaaaaaa&#34;]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --dhcp-options-id <span style="color:#e6db74">&#34;ocid1.dhcpoptions.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --prohibit-public-ip-on-vnic <span style="color:#e6db74">&#34;false&#34;</span>
+</span></span></code></pre></div><h4 id="sub-rede-privada-subnprv">Sub-rede privada (subnprv)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ oci network subnet create <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --compartment-id <span style="color:#e6db74">&#34;ocid1.compartment.oc1..aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --vcn-id <span style="color:#e6db74">&#34;ocid1.vcn.oc1.sa-saopaulo-1.amaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --cidr-block <span style="color:#e6db74">&#34;10.100.20.0/24&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --display-name <span style="color:#e6db74">&#34;subnprv&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --dns-label <span style="color:#e6db74">&#34;subnprv&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --route-table-id <span style="color:#e6db74">&#34;ocid1.routetable.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --security-list-ids <span style="color:#e6db74">&#39;[&#34;ocid1.securitylist.oc1.sa-saopaulo-1.aaaaaaaa&#34;]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --dhcp-options-id <span style="color:#e6db74">&#34;ocid1.dhcpoptions.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --prohibit-public-ip-on-vnic <span style="color:#e6db74">&#34;true&#34;</span>
+</span></span></code></pre></div><h2 id="roteamento-de-sub-rede">Roteamento de Sub-rede</h2>
+<p>Roteamento de sub-rede refere-se à decisão de roteamento aplicada no momento em que um pacote sai da VNIC de um recurso computacional hospedado em uma determinada sub-rede. Esse tipo de roteamento também é conhecido como <strong><em>egress routing</em></strong> e é controlado pela tabela de rotas associada à sub-rede. Vale lembrar que toda sub-rede criada possui uma tabela de rotas vinculada.</p>
+<p>A tabela de rotas da sub-rede funciona em conjunto com o endereço IP do gateway da sub-rede sendo que, uma sub-rede quando criada, <strong>reserva o primeiro endereço IP do CIDR escolhido para ser o gateway dessa sub-rede</strong>. Por exemplo, se o CIDR da sub-rede for <strong>10.100.20.0/24</strong>, o endereço IP do gateway será automaticamente <strong>10.100.20.1</strong>.</p>
+<p>Manipular a tabela de rotas de uma sub-rede é relativamente simples, pois ela permite apenas a inserção de <strong>regras estáticas</strong> de forma manual (<strong>static routes</strong>). Além disso, o next-hop dessas regras pode ser definido de duas formas:</p>
+<ul>
+<li>Gateways de Comunicação
+<ul>
+<li>Neste caso, o destino pode ser qualquer um dos gateways de comunicação já apresentados.</li>
+</ul>
+</li>
+<li>Endereço IP Privado (Private IP)
+<ul>
+<li>Um endereço IP privado de outra VNIC na mesma sub-rede, geralmente utilizado para encaminhar o tráfego para uma instância de computação que desempenha o papel de firewall.</li>
+</ul>
+</li>
+</ul>
+<p>Por exemplo, para adicionar uma regra de roteamento em que o next-hop seja um NAT Gateway, pode-se utilizar o seguinte comando:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$  oci network route-table update <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --rt-id <span style="color:#e6db74">&#34;ocid1.routetable.oc1.sa-saopaulo-1.aaaaaaaa&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --route-rules <span style="color:#e6db74">&#39;[{&#34;cidrBlock&#34;: &#34;0.0.0.0/0&#34;,&#34;networkEntityId&#34;: &#34;ocid1.natgateway.oc1.sa-saopaulo-1.aaaaaaaa&#34;}]&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --force <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>&gt; --wait-for-state <span style="color:#e6db74">&#34;AVAILABLE&#34;</span>
+</span></span></code></pre></div><h2 id="fluxo-de-decisão-de-roteamento">Fluxo de Decisão de Roteamento</h2>
+<p>O fluxo de roteamento, ou a ordem de avaliação das regras de roteamento para alcançar uma rede diferente, inicia-se sempre no host e, em seguida, passa pela tabela de rotas da sub-rede.</p>
+<p>Considere o exemplo a seguir: um compute instance com uma VNIC configurada com o endereço IP <strong>10.100.20.10</strong> deseja acessar a Internet, por exemplo, o endereço <strong>8.8.8.8</strong>.</p>
+<p><img src="/oci/network/vcn-e-roteamento-de-subrede/img/oci-subnet-1.png" alt="VCN Default Route Table #2"></p>
+<ol>
+<li>
+<p>A primeira decisão de roteamento ocorre dentro do host, onde o sistema operacional consulta sua própria tabela de rotas para determinar qual é o próximo destino do pacote. Nesse caso, a tabela de rotas do host aponta para o endereço IP <strong>10.100.20.1</strong>, ou seja, o next-hop é o gateway da sub-rede.</p>
+</li>
+<li>
+<p>Quando o pacote chega ao gateway da sub-rede, uma nova decisão de roteamento entra em ação. Nesse ponto, a tabela de rotas associada à sub-rede é utilizada para determinar o próximo salto em direção à Internet, que, neste exemplo, é o NAT Gateway. A partir disso, o pacote pode alcançar endereços externos, como na Internet.</p>
+</li>
+</ol>
+
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+

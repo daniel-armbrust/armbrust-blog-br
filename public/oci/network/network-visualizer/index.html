@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Network Visualizer | Armbrust Blog</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/oci/">OCI</a></li>
+      
+      <li><a href="/whoami/">whoami</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Network Visualizer</span></h1>
+
+<h2 class="date">2025/12/15</h2>
+</div>
+
+<main>
+<h2 id="introdução">Introdução</h2>
+<p>O <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm">Network Visualizer</a> é uma ferramenta do OCI útil para visualizar a topologia de rede criada em uma região. Acesse-a pelo menu <strong>Network</strong> &gt; <strong>Network Command Center</strong>.</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-1.png" alt="Network Viualizer #1"></p>
+<p>Após abrir a ferramenta, selecione o compartimento que contém os recursos de rede e marque
+<strong>Include child compartments</strong> para que seja feita uma varredura em todos os compartimentos filhos que estão abaixo do compartimento selecionado:</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-2.png" alt="Network Viualizer #2"></p>
+<p>Dica: <strong>Sempre que possível, concentre os recursos de rede em um único compartimento. Caso seja necessário utilizar múltiplos compartimentos, organize-os de forma hierárquica sob um mesmo compartimento pai. Isso facilita a visualização e o entendimento da topologia do ambiente através do Network Viualizer.</strong></p>
+<h2 id="representação-dos-componentes">Representação dos Componentes</h2>
+<p>O <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm">Network Visualizer</a> usa símbolos para representar elementos da topologia:</p>
+<ul>
+<li>
+<p><strong>Hexágono</strong></p>
+<ul>
+<li>VCN</li>
+</ul>
+</li>
+<li>
+<p><strong>Círculo</strong></p>
+<ul>
+<li>DRG</li>
+</ul>
+</li>
+<li>
+<p><strong>Quadrado/Retângulo</strong></p>
+<ul>
+<li>Conexão IPSec ou FastConnect.</li>
+</ul>
+</li>
+</ul>
+<p>Cada conexão com o DRG é representada por um traço. No meio do traço há um pequeno círculo que indica a tabela de rotas do DRG.</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-3.png" alt="Network Viualizer #3"></p>
+<p>Há outros símbolos usados pelo <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm">Network Visualizer</a> e, é recomendado sempre consultar a <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/network_visualizer.htm">documentação oficial</a> da ferramenta pois, novos símbolos podem ser disponibilizados.</p>
+<h2 id="análise-de-roteamento">Análise de Roteamento</h2>
+<p>Suponha que você queira entender como um compute instance em uma sub-rede da VCN-APPL-1 se comunica com recursos da VCN-APPL-2. No exemplo, há uma instância chamada APPL-1 (<code>10.50.10.10</code>) na VCN-APPL-1 e outra chamada APPL-2 (<code>10.60.10.10</code>) na VCN-APPL-2.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@appl1 ~<span style="color:#f92672">]</span>$ ping -c2 10.60.10.10
+</span></span><span style="display:flex;"><span>PING 10.60.10.10 <span style="color:#f92672">(</span>10.60.10.10<span style="color:#f92672">)</span> 56<span style="color:#f92672">(</span>84<span style="color:#f92672">)</span> bytes of data.
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">64</span> bytes from 10.60.10.10: icmp_seq<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">63</span> time<span style="color:#f92672">=</span>0.792 ms
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">64</span> bytes from 10.60.10.10: icmp_seq<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span> ttl<span style="color:#f92672">=</span><span style="color:#ae81ff">63</span> time<span style="color:#f92672">=</span>0.687 ms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--- 10.60.10.10 ping statistics ---
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2</span> packets transmitted, <span style="color:#ae81ff">2</span> received, 0% packet loss, time 1001ms
+</span></span><span style="display:flex;"><span>rtt min/avg/max/mdev <span style="color:#f92672">=</span> 0.687/0.739/0.792/0.052 ms
+</span></span></code></pre></div><h3 id="1-tabela-de-rotas-do-appl-1-10501010">1. Tabela de rotas do APPL-1 (10.50.10.10)</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#f92672">[</span>opc@appl1 ~<span style="color:#f92672">]</span>$ ip route show
+</span></span><span style="display:flex;"><span>default via 10.50.10.1 dev enp0s6 proto dhcp src 10.50.10.10 metric <span style="color:#ae81ff">100</span> 
+</span></span><span style="display:flex;"><span>10.50.10.0/24 dev enp0s6 proto kernel scope link src 10.50.10.10 metric <span style="color:#ae81ff">100</span> 
+</span></span><span style="display:flex;"><span>169.254.0.0/16 dev enp0s6 proto dhcp scope link src 10.50.10.10 metric <span style="color:#ae81ff">100</span> 
+</span></span></code></pre></div><p>O comando <code>ip route show</code> mostra uma rota default (<code>default</code>) que envia todo o tráfego para o IP <code>10.50.10.1</code>, que é o gateway da sub-rede. Essa rota vale para todos os destinos, exceto <code>10.50.10.0/24</code> e <code>169.254.0.0/16</code>.</p>
+<h3 id="2-tabela-de-rotas-da-sub-rede">2. Tabela de rotas da sub-rede</h3>
+<p>Quando o tráfego chega ao gateway da sub-rede (<code>10.50.10.1</code>), a tabela de rotas da sub-rede (<code>rt_subnprv-1</code>) é consultada para determinar o próximo salto (next-hop).</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-4.png" alt="Network Viualizer #4"></p>
+<p>Nessa tabela há uma regra IPv4 que encaminha todo o tráfego para o DRG (<code>drg-interno</code>).</p>
+<h4 id="3-tabela-de-rotas-do-drg">3. Tabela de rotas do DRG</h4>
+<p>A próxima decisão de roteamento ocorre quando o <em>PACOTE ENTRA</em> no DRG:</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-5.png" alt="Network Viualizer #5"></p>
+<p>Neste caso, consulta-se a tabela do DRG <code>drg-attch-rt_vcn-appl-1</code> para determinar o próximo salto:</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-6.png" alt="Network Viualizer #6"></p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-7.png" alt="Network Viualizer #7"></p>
+<p>Redes importadas para este anexo via route distribution <code>import-routes_vcn-appl-1</code>:</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-8.png" alt="Network Viualizer #8"></p>
+<p>Observa‑se que o próximo salto para alcançar o host de destino (<code>10.60.10.10</code>) é o anexo <code>drg-attch_vcn-appl-2</code>.</p>
+<h3 id="4-saída-do-drg">4. Saída do DRG</h3>
+<p>Após a decisão de roteamento da tabela <code>drg-attch-rt_vcn-appl-1</code>, o tráfego é encaminhado diretamente para o anexo <code>drg-attch_vcn-appl-2</code>, onde se encontra o host de destino (<code>10.60.10.10</code>):</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-9.png" alt="Network Viualizer #9"></p>
+<p>Lembre que, se o anexo tiver uma tabela de rotas de VCN associada (<code>VCN Route Table</code>), haverá mais uma decisão de roteamento antes do tráfego alcançar o destino:</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-10.png" alt="Network Viualizer #10"></p>
+<p>Esse tipo de configuração normalmente é usado para forçar o tráfego a passar por um firewall antes de atingir o destino. No caso da topologia apresentada, o tráfego ao entrar nas VCNs <code>vcn-fw-interno</code> ou <code>vcn-fw-externo</code>, será encaminhado para um <a href="https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/home.htm">Network Load Balancer</a> para então ser encaminhado para o firewall.</p>
+<p><img src="/oci/network/network-visualizer/img/network-visualizer-11.png" alt="Network Viualizer #11"></p>
+
+</main>
+
+  <footer>
+  <div class="site-footer">
+  <p>
+    © 2026 <a href="mailto:darmbrust@gmail.com">Daniel Armbrust</a>
+</div>
+  
+  </footer>
+  </body>
+</html>
+
